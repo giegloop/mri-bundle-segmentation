@@ -12,10 +12,7 @@ by P. Mukherjee, J.I. Berman, S.W. Chung, C.P. Hess R.G. Henry.
 """
 from scipy import spatial as sc
 
-def J_ij(veci,vecj,FAi,FAj):
-    if (and(FAi<0.34, FAj<0.34):
-       return 0 
-    else :
-       return sc.distance.cosine(veci, vecj)+1
+def J_ij(veci,vecj):
+     return sc.distance.cosine(veci, vecj)+0.7
             
     
