@@ -42,7 +42,7 @@ for i=1:210
             z = times(d,bvecs(:,3));
             [ center, radii, evecs, v, chi2 ] = ellipsoid_fit( [x y z ], '' );
             [m,in] = min(radii);
-            embeddings(i,j,k,:)=m*evecs(in);
+            embeddings(i,j,k,:)=evecs(in,:);
             FA(i,j,k)=sqrt((1/radii(1)-1/radii(2))^2+(1/radii(1)-1/radii(3))^2+(1/radii(2)-1/radii(3))^2)/(sqrt(2*((1/radii(2))^2+(1/radii(3))^2+(1/radii(1))^2)));
             fprintf('Computed ellipsoid at(%d,%d,%d), FA=%f, ax1:%f, ax2=%f, ax3=%f, min=%f \n',i,j,k,FA(i,j,k),radii(1),radii(2),radii(3),m);
         end
@@ -81,17 +81,18 @@ fclose(emb);
 
 
 %% SEE ACTIVE AREAS OF THE BRAIN (THRESHOLD AT K=0.31)
-% image = zeros(130,210,3);
-% 
-% for z=1:130
-%     for y=1:210
-%         if(FA(60,y,z)>0.34)
-%             image(131-z,y,1)=1; 
-%         end
-%     end
-% end
-% 
-% figure, imshow(image)
+image = zeros(130,210,3);
+
+for z=1:130
+    for y=1:210
+        if(FA(60,y,z)>0.34)
+            disp(embeddings(60,y,z,:))
+            image(131-z,y,1)=1; 
+        end
+    end
+end
+
+figure, imshow(image)
 
 
 %% DRAW THE STAR!

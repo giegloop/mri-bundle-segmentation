@@ -4,6 +4,7 @@ from scipy import spatial as sc
 import itertools
 import heapq
 import matplotlib.pyplot as plt
+import math as math
 
 ########################################################################################################################
 
@@ -16,7 +17,7 @@ q = 20  # num. of pot spin variables
 iter_perT = 50  # num. of iterations per temperature
 t_per_min = 0.9  # min percentage from transition temperature
 t_per_max = 1.1  # max percentage from transition temperature
-t_etha = 0.99  # number of steps from min to max
+t_etha = 0.999  # number of steps from min to max
 
 k_neighbors = 20  # number of nearest neighbors
 
@@ -54,19 +55,6 @@ def dist_lat(i, j):
     return sc.distance.euclidean(p1, p2)
 
 
-# returns average distance between all pairs i, j
-def compute_d_avg():
-    xyzs = np.array([np.array(index_to_xyz(i)) for i in range(N_points)])
-    dist = sc.distance.pdist(xyzs, 'euclidean')
-
-    return np.mean(dist), np.mean(np.sqrt(dist))
-
-
-# compute average distance
-print("Counting average distance...")
-d_avg, dSq_avg = compute_d_avg()
-
-
 # returns k-nearest neighbours with lattice distance within white matter
 def wm_neighbors(i, k):
     dist = np.array([dist_lat(i, j) for j in range(N_points)])
@@ -77,9 +65,28 @@ print("Computing nearest neighbours...")
 nearest_neighbors = np.array([wm_neighbors(i, k_neighbors) for i in range(N_points)])
 
 
+# returns average distance between all pairs i, j
+def compute_d_avg():
+    dists = np.empty(N_points)
+    dists_sq = np.empty(N_points)
+    for i in range(N_points):
+        dist = np.array([dist_lat(i, j) for j in nearest_neighbors[i]])
+        dists[i] = np.mean(dist)
+        dists_sq[i] = np.mean(np.sqrt(dist))
+
+    return np.mean(dists), np.mean(dists_sq)
+
+
+# compute average distance
+print("Counting average distance...")
+d_avg, dSq_avg = compute_d_avg()
+
 # cosine distance between two vectors from max_diff
 def j_shape(i, j):
-    return sc.distance.cosine(max_diff[i], max_diff[j]) + 1
+    v_i = max_diff[i]
+    v_j = max_diff[j]
+
+    return 2 - np.abs(np.dot(v_i, v_j) / (sc.distance.norm(v_i) * sc.distance.norm(v_j)))
 
 
 # proximity function for two vectors from max_diff
@@ -95,7 +102,7 @@ def j_proximity(i, j):
 def j_cost(i, j):
     return j_proximity(i, j) * j_shape(i, j)
 
-t_trans = (1 / (4 * np.log(1 + np.sqrt(q)))) * np.exp(-dSq_avg / 2 * d_avg)  # page 14 of the paper
+t_trans = (1 / (4 * np.log(1 + np.sqrt(q)))) * np.exp(-dSq_avg / 2 * pow(d_avg, 2))  # page 14 of the paper
 t_ini = 1.1 * t_trans
 t_end = 0.9 * t_trans
 
@@ -107,7 +114,7 @@ t_arr = []  # array with average squared magnetation of each time
 
 
 t_N = 1
-t = t_ini * (t_etha ** t_N)
+t = t_ini * pow(t_etha, t_N)
 while t > t_end:  # for each temperature
     print("Time: {}".format(t))
     S = np.ones(N_points)  # Initialize S to ones
@@ -142,16 +149,22 @@ while t > t_end:  # for each temperature
 
         new_mag = (q * N_max - N_points) / ((q - 1) * N_points)  # (4) in paper
         mag += new_mag
-        magSq += new_mag ** 2
+        magSq += pow(new_mag, 2)
 
     t_arr.append(t)
     mag_arr.append(mag / iter_perT)
     mag_sq_arr.append(magSq / iter_perT)
 
     t_N += 1
-    t = t_ini * t_etha ** t_N
+    t = t_ini * pow(t_etha, t_N)
 
-suscept_arr = [(N_points / t_arr[t]) * (mag_sq_arr[t] - mag_arr[t]) for t in range(len(t_arr))]
+suscept_arr = [(N_points / t_arr[t]) * (mag_sq_arr[t] - pow(mag_arr[t], 2)) for t in range(len(t_arr))]
+
+t_arr = np.array(t_arr)
+mag_arr = np.array(mag_arr)
+mag_sq_arr = np.array(mag_sq_arr)
+suscept_arr = np.array(suscept_arr)
+
 plt.plot(suscept_arr)
 
 
