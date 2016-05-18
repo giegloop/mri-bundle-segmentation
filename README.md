@@ -12,8 +12,8 @@ Project for Statistical Learning Theory Course at ETH Zurich by Antonio Orvieto,
 
 ## Pre-processing
 You can either do the pre-processing yourself, or download the following two files and place them in "code/data":
- * embeddings (download at https://drive.google.com/file/d/0B-BbrQ1IXzeqa2drbkQyaTBjZ0E)
- * FA (download at https://drive.google.com/open?id=0B-BbrQ1IXzeqSmpZek1jT1RWZVU)
+* embeddings (download at https://drive.google.com/file/d/0B-BbrQ1IXzeqa2drbkQyaTBjZ0E)
+* FA (download at https://drive.google.com/open?id=0B-BbrQ1IXzeqSmpZek1jT1RWZVU)
 If you want to do the pre-processing yourself, follow these steps:
 1. Make sure the following files are present in the folder "code/data/":
   * embeddings
