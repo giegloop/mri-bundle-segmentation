@@ -20,14 +20,4 @@ Team members: Sjoerd van Bekhoven, Torres Garcia Moises, Antonio Orvieto
    Not all data points need to be considered in the clustering, only white matter. to do this you need to set
    a threshold. To get a nice result pick only data point with F>0.34 (this gives the picture in the folder)
  
-4) The cost Jij is a J_proximity * J_shape (product). The function J_shape only returns J_shape.
-	Jij will be a number from 1 (perfectly similar) to 2 (opposite). The bias can be different (if we set J=0
-	if they are similar, equal shapes will be clustered together for sure even if they are far away, as we pay 0)
-	
-	If you need Jshape btw two points 1 and 2 just call JShape(max_diff(ijk,:),max_diff(ijk,:))
-	
-	There is still the need to set up a proper J_proximity. a good answer is in
-	http://vyssotski.ch/BasicsOfInstrumentation/SpikeSorting/Blatt1996(SuperParamagneticClusteringOfData).pdf
-	formula(2) (I cannot do it because I do not know the neighborhood <i,j> criterion you have set.)
-
-        We can just skip that for a first guess of the solution
+5) Jij(max_diff(ijk,:),max_diff(i2 j2 k2,:), FA(ijk), FA(i2 j2 k2) )
