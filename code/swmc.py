@@ -3,6 +3,7 @@ import networkx as nx
 from scipy import spatial as sc
 import itertools
 import heapq
+import matplotlib.pyplot as plt
 
 ########################################################################################################################
 
@@ -12,12 +13,12 @@ z_dim = 91  # z dimension of original data
 
 q = 20  # num. of pot spin variables
 
-iter_perT = 100  # num. of iterations per temperature
+iter_perT = 50  # num. of iterations per temperature
 t_per_min = 0.9  # min percentage from transition temperature
 t_per_max = 1.1  # max percentage from transition temperature
-t_step = 0.01  # temperature step size
+t_etha = 0.99  # number of steps from min to max
 
-k_neighbors = 5  # number of nearest neighbors
+k_neighbors = 20  # number of nearest neighbors
 
 wm_threshold = 0.34  # threshold for white mass (FA > wm_threshold is considered white mass)
 
@@ -46,7 +47,7 @@ def index_to_xyz(i):
 
 
 # distance between two points in the lattice
-def d_lat(i, j):
+def dist_lat(i, j):
     p1 = np.array(index_to_xyz(i))
     p2 = np.array(index_to_xyz(j))
 
@@ -58,12 +59,22 @@ def compute_d_avg():
     xyzs = np.array([np.array(index_to_xyz(i)) for i in range(N_points)])
     dist = sc.distance.pdist(xyzs, 'euclidean')
 
-    return np.sum(dist) / len(dist), np.sum(np.sqrt(dist)) / len(dist)
+    return np.mean(dist), np.mean(np.sqrt(dist))
 
 
 # compute average distance
 print("Counting average distance...")
 d_avg, dSq_avg = compute_d_avg()
+
+
+# returns k-nearest neighbours with lattice distance within white matter
+def wm_neighbors(i, k):
+    dist = np.array([dist_lat(i, j) for j in range(N_points)])
+    return heapq.nsmallest(k, range(len(dist)), dist.take)
+
+
+print("Computing nearest neighbours...")
+nearest_neighbors = np.array([wm_neighbors(i, k_neighbors) for i in range(N_points)])
 
 
 # cosine distance between two vectors from max_diff
@@ -73,7 +84,7 @@ def j_shape(i, j):
 
 # proximity function for two vectors from max_diff
 def j_proximity(i, j):
-    return 1 / k_neighbors * (d_lat(i, j) / (2 * d_avg))
+    return 1 / k_neighbors * (dist_lat(i, j) / (2 * d_avg))
 
 
 # Jij is the cost of considering coupled object i and object j. Here we use the
@@ -84,25 +95,20 @@ def j_proximity(i, j):
 def j_cost(i, j):
     return j_proximity(i, j) * j_shape(i, j)
 
-
-# returns k-nearest neighbours with lattice distance within white matter
-def wm_neighbors(i, k):
-    dist = np.array([d_lat(i, j) for j in range(N_points)])
-    return heapq.nsmallest(k, range(len(dist)), dist.take)
-
-
-print("Computing nearest neighbours...")
-nearest_neighbors = np.array([wm_neighbors(i, k_neighbors) for i in range(N_points)])
-
 t_trans = (1 / (4 * np.log(1 + np.sqrt(q)))) * np.exp(-dSq_avg / 2 * d_avg)  # page 14 of the paper
-t_range = np.arange(0.9 * t_trans, 1.1 * t_trans, (1.1 * t_trans - 0.9 * t_trans) / 100)  # i just wrote a random step size 0.01
-t_range = t_range[::-1]  # reverse array to go from max to min like Viktor showed
+t_ini = 1.1 * t_trans
+t_end = 0.9 * t_trans
 
-mag_arr = np.empty(len(t_range))
-magSq_arr = np.empty(len(t_range))
+print("Start Monte Carlo with t_start = {}, t_end = {}, etha = {}...".format(t_ini, t_end, t_etha))
 
-print("Start Monte Carlo...")
-for t_index, t in enumerate(t_range):  # for each temperature
+mag_arr = []  # array with average magnetation of each time
+mag_sq_arr = []  # array with average squared magnetation of each time
+t_arr = []  # array with average squared magnetation of each time
+
+
+t_N = 1
+t = t_ini * (t_etha ** t_N)
+while t > t_end:  # for each temperature
     print("Time: {}".format(t))
     S = np.ones(N_points)  # Initialize S to ones
     mag = 0
@@ -128,18 +134,26 @@ for t_index, t in enumerate(t_range):  # for each temperature
             for node in graph.nodes():
                 S[node] = new_q
 
-        N_max = 0  # find N_max and compute mag and magSq, page 5 of the paper
+        N_max = 0  # compute N_max, page 5 of the paper
         for q_val in range(q):
             new_N_max = sum(S == q_val)
             if new_N_max > N_max:
                 N_max = new_N_max
 
-        new_mag = (q * N_max - N_points) / ((q - 1) * N_points)
-        mag = mag + new_mag
-        magSq = magSq + new_mag ** 2
+        new_mag = (q * N_max - N_points) / ((q - 1) * N_points)  # (4) in paper
+        mag += new_mag
+        magSq += new_mag ** 2
 
-    mag_arr[t_index] = mag / iter_perT
-    magSq_arr = magSq / iter_perT
+    t_arr.append(t)
+    mag_arr.append(mag / iter_perT)
+    mag_sq_arr.append(magSq / iter_perT)
+
+    t_N += 1
+    t = t_ini * t_etha ** t_N
+
+suscept_arr = [(N_points / t_arr[t]) * (mag_sq_arr[t] - mag_arr[t]) for t in range(len(t_arr))]
+plt.plot(suscept_arr)
+
 
 print("Finished!")
 
