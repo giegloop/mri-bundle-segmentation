@@ -15,9 +15,11 @@ close all;
 
 %% DATA LOADING
 disp('Loading data..');
-addpath('C:\Users\Antonio Orvieto\Desktop\SLT PROJECT\code');
-data = load_nii('C:\Users\Antonio Orvieto\Desktop\SLT PROJECT\data\diff_data.nii.gz'); 
-bvecs = load('C:\Users\Antonio Orvieto\Desktop\SLT PROJECT\data\bvecs');
+addpath('/');
+addpath('preprocessing/nifti/')
+addpath('preprocessing/ellipsoid_fit/')
+data = load_nii('data/diff_data.nii.gz'); 
+bvecs = load('data/bvecs');
 disp('Finished loading data.');
 pause(1);
 
