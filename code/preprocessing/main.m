@@ -31,7 +31,7 @@ embeddings = zeros(210,210,130,3);
 %fractional anisotropy
 FA = zeros(210,210,130);
 
-for i=60:60
+for i=1:210
     for j=1:210
         for k=1:130
             d=squeeze(data.img(i,j,k,:));
