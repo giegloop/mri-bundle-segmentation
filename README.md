@@ -27,7 +27,7 @@ If you want to do the pre-processing yourself, follow these steps:
 ## Instructions
 Make sure that in the folder "code/data/" the following files are present (see steps under pre-processing):
   * embeddings
-  * diff_data.nii.gz
+  * FA
 
 1. First, we create a subset of the data to run the algorithm on. Do this by opening "code/subset.py" and change the global variables x\_sub, y\_sub and z\_sub to the subset you want. Then, run the file. This will create three files in the folder "code/data/": "dim\_sub.npy" , "embedding\_sub.npy" and "FA\_sub.npy".
 2. We are ready for the Svendsen-Wang Monte Carlo algorithm, located in "code/swmc.py". At the top of the file there are a couple of variables which you can change, such as the number of runs per temperature, the number of Pot spin variables etc. If you have configured the way you want, you can run the file. This will create a file in the folder "code/results/" in the format "results_{ddmmyyhhss}.pkl".
