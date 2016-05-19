@@ -57,7 +57,7 @@ def dist_lat(i, j):
 
 # returns k-nearest neighbours with lattice distance within white matter
 def wm_neighbors(i, k):
-    dist = np.array([dist_lat(i, j) for j in range(N_points)])
+    dist = np.array([dist_lat(i, j) if i != j else np.float('infinity') for j in range(N_points)])
     return heapq.nsmallest(k, range(len(dist)), dist.take)
 
 
