@@ -8,23 +8,23 @@ from datetime import datetime
 import pickle
 
 ########################################################################################################################
+
 t_superp = 1 # temperature in superparamagnetic phase
 
-t_iter = 1 # num. of iterations MC algorithm
+t_iter = 5 # num. of iterations MC algorithm
 t_burn_in = 0  # number of burn-in samples
 
 q = 20  # num. of pot spin variables
 
 k_neighbors = 20  # number of nearest neighbors
 
-wm_threshold = 0.34  # threshold for white mass (FA > wm_threshold is considered white mass)
+wm_threshold = 0.7  # threshold for white mass (FA > wm_threshold is considered white mass)
 
 Gij_threshold = 0.5 # threshold for "core" clusters, section 4.3.2 of the paper
 
 ########################################################################################################################
 
 start = time.time()
-
 
 # load data with maximum diffusion and fractional anisotropy
 max_diff = np.load("data/max_diff_sub.npy")
@@ -64,9 +64,12 @@ def wm_neighbors(i, k):
     return heapq.nsmallest(k, range(len(dist)), dist.take)
 
 
-print("Computing nearest neighbours...")
-nearest_neighbors = np.array([wm_neighbors(i, k_neighbors) for i in range(N_points)])
-
+# computing nearest neighbors
+print("Computing nearest neighbors...")
+nearest_neighbors = []
+for i in range(N_points):
+    print("Computing nearest neighbors for {} of {}".format(i,N_points))
+    nearest_neighbors.append(wm_neighbors(i, k_neighbors))
 
 # returns average distance between all pairs i, j
 def compute_d_avg():
@@ -106,9 +109,12 @@ def j_cost(i, j):
     return j_proximity(i, j) * j_shape(i, j)
 
 
-print("Start Monte Carlo for t_superp = {}...".format(t_superp)
+print("Start Monte Carlo for t_superp = {}...".format(t_superp))
 
-Cij = np.zeros((N_points,N_points)) # probability of finding sites i and j in the same cluster
+Cij = {} # probability of finding sites i and j in the same cluster
+for vi in range(N_points):
+    for vj in range(vi, N_points):
+        Cij['i'+str(vi)+'j'+str(vj)] = 0
 
 S = np.ones(N_points)  # Initialize S to ones
 
@@ -135,39 +141,59 @@ for i in range(t_iter):  # given iterations per temperature
 
     if t_index >= t_burn_in:
         for vi in range(N_points):
-            for vj in range(vj, N_points):
-                if (vi, vj) in G.edges(): # add 1 to count if nodes are connected (same SW-cluster)
-                    Cij[vi][vj] = Cij[vi][vj] + 1
+            for vj in range(vi, N_points):
+            	for graph in subgraphs:
+                    if vi in graph.nodes() and vj in graph.nodes(): # add 1 to count if nodes are in the same SW-cluster
+                        Cij['i'+str(vi)+'j'+str(vj)] += 1
 
     t_index += 1
 
 # average and obtain estimated probabilities
 for vi in range(N_points):
-    for vj in range(vj, N_points):
-        Cij[vi][vj] = Cij[vi][vj] / t_iter
+    for vj in range(vi, N_points):
+        Cij['i'+str(vi)+'j'+str(vj)] /= (t_iter-t_burn_in)
 
 # calculate spin-spin correlation function Gij, (11) in the paper
-Gij = np.zeros((N_points,N_points))
+Gij = {}
 for vi in range(N_points):
-    for vj in range(vj, N_points):
-        Gij[vi][vj] = ((q-1)*Cij[vi][vj]+1)/q
+    for vj in range(vi, N_points):
+        Gij['i'+str(vi)+'j'+str(vj)] = ((q-1)*Cij['i'+str(vi)+'j'+str(vj)]+1)/q
 
 # initialize graph where we are going to construct our final clustering
+print("Construct final graph and calculate clustering")
 G = nx.Graph()
 
 for i in range(N_points):
     G.add_node(i)
 
-for i in range(N_points):
-    for j in range(vj, N_points):
-    	if Gij[i][j] > Gij_threshold
-            G.add_edge(i, j)
+for vi in range(N_points): # form "core" clusters
+    for vj in range(i, N_points):
+    	if Gij['i'+str(vi)+'j'+str(vj)] > Gij_threshold:
+            G.add_edge(vi, vj)
+
+for vi in range(N_points): # capture points lying in the periphery
+    neighbours = nearest_neighbors[i]
+    Gij_current = 0
+    best_neighbour = 0
+    for vj in neighbours:
+        if vi < vj: # in our dict, i is always smaller than j
+    	    if Gij['i'+str(vi)+'j'+str(vj)] > Gij_current:
+                Gij_current = Gij['i'+str(vi)+'j'+str(vj)]
+                best_neighbour = vj
+        else:
+            if Gij['i'+str(vj)+'j'+str(vi)] > Gij_current:
+                Gij_current = Gij['i'+str(vj)+'j'+str(vi)]
+                best_neighbour = vj
+
+    G.add_edge(vi, best_neighbour)
+
 
 # return final clustering
+print("Formatting output")
 clusters = np.empty(N_points)
 cluster_id = 1
 for graph in list(nx.connected_component_subgraphs(G)):
-    for node in graph.nodes()
+    for node in graph.nodes():
         clusters[node] = cluster_id
     cluster_id += 1
 
