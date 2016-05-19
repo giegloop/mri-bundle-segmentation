@@ -134,6 +134,7 @@ for t_i in range(t_iter):  # given iterations per temperature
                 G.add_edge(i, j)
 
     subgraphs = list(nx.connected_component_subgraphs(G))  # find SW-clusters
+    print("It. {}/{} \t {} subgraphs".format(t_i + 1, t_iter, len(subgraphs)))
     for graph in subgraphs:
         new_q = np.random.randint(1, q+1)
         for node in graph.nodes():
