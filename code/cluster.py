@@ -9,16 +9,16 @@ import pickle
 
 ########################################################################################################################
 
-t_superp = 1 # temperature in superparamagnetic phase
+t_superp = 0.043096662782047483 # temperature in superparamagnetic phase
 
-t_iter = 5 # num. of iterations MC algorithm
-t_burn_in = 0  # number of burn-in samples
+t_iter = 100 # num. of iterations MC algorithm
+t_burn_in = 10  # number of burn-in samples
 
 q = 20  # num. of pot spin variables
 
 k_neighbors = 20  # number of nearest neighbors
 
-wm_threshold = 0.7  # threshold for white mass (FA > wm_threshold is considered white mass)
+wm_threshold = 0.5  # threshold for white mass (FA > wm_threshold is considered white mass)
 
 Gij_threshold = 0.5 # threshold for "core" clusters, section 4.3.2 of the paper
 
@@ -142,7 +142,7 @@ for i in range(t_iter):  # given iterations per temperature
     if t_index >= t_burn_in:
         for vi in range(N_points):
             for vj in range(vi, N_points):
-            	for graph in subgraphs:
+                for graph in subgraphs:
                     if vi in graph.nodes() and vj in graph.nodes(): # add 1 to count if nodes are in the same SW-cluster
                         Cij['i'+str(vi)+'j'+str(vj)] += 1
 
@@ -168,7 +168,7 @@ for i in range(N_points):
 
 for vi in range(N_points): # form "core" clusters
     for vj in range(i, N_points):
-    	if Gij['i'+str(vi)+'j'+str(vj)] > Gij_threshold:
+        if Gij['i'+str(vi)+'j'+str(vj)] > Gij_threshold:
             G.add_edge(vi, vj)
 
 for vi in range(N_points): # capture points lying in the periphery
@@ -177,7 +177,7 @@ for vi in range(N_points): # capture points lying in the periphery
     best_neighbour = 0
     for vj in neighbours:
         if vi < vj: # in our dict, i is always smaller than j
-    	    if Gij['i'+str(vi)+'j'+str(vj)] > Gij_current:
+            if Gij['i'+str(vi)+'j'+str(vj)] > Gij_current:
                 Gij_current = Gij['i'+str(vi)+'j'+str(vj)]
                 best_neighbour = vj
         else:
