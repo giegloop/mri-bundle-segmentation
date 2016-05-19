@@ -3,8 +3,9 @@ import networkx as nx
 from scipy import spatial as sc
 import itertools
 import heapq
-import matplotlib.pyplot as plt
-import math as math
+import time
+from datetime import datetime
+import pickle
 
 ########################################################################################################################
 
@@ -14,16 +15,20 @@ z_dim = 91  # z dimension of original data
 
 q = 20  # num. of pot spin variables
 
-iter_perT = 50  # num. of iterations per temperature
+t_iter_per_temp = 1  # num. of iterations per temperature
+t_burn_in = 0  # number of burn-in samples
+
 t_per_min = 0.9  # min percentage from transition temperature
 t_per_max = 1.1  # max percentage from transition temperature
-t_etha = 0.999  # number of steps from min to max
+t_etha = 0.996  # number of steps from min to max
 
 k_neighbors = 20  # number of nearest neighbors
 
 wm_threshold = 0.34  # threshold for white mass (FA > wm_threshold is considered white mass)
 
 ########################################################################################################################
+
+start = time.time()
 
 # load data with maximum diffusion and fractional anisotropy
 # max_diff = np.genfromtxt('data/embeddings', dtype='float64')
@@ -115,14 +120,15 @@ t_arr = []  # array with average squared magnetation of each time
 
 t_N = 1
 t = t_ini * pow(t_etha, t_N)
+t_index = 0
 while t > t_end:  # for each temperature
     print("Time: {}".format(t))
     S = np.ones(N_points)  # Initialize S to ones
     mag = 0
     magSq = 0
 
-    for i in range(iter_perT):  # given iterations per temperature
-
+    for i in range(t_iter_per_temp):  # given iterations per temperature
+        print("\t Iteration: {}/{}".format(i + 1, t_iter_per_temp))
         G = nx.Graph()  # Initialize graph where we will store "frozen" bonds
         for i in range(N_points):
             G.add_node(i)
@@ -148,26 +154,52 @@ while t > t_end:  # for each temperature
                 N_max = new_N_max
 
         new_mag = (q * N_max - N_points) / ((q - 1) * N_points)  # (4) in paper
-        mag += new_mag
-        magSq += pow(new_mag, 2)
+
+        if t_index >= t_burn_in:
+            mag += new_mag
+            magSq += pow(new_mag, 2)
+
+        t_index += 1
 
     t_arr.append(t)
-    mag_arr.append(mag / iter_perT)
-    mag_sq_arr.append(magSq / iter_perT)
+    mag_arr.append(mag / (t_iter_per_temp - t_burn_in))
+    mag_sq_arr.append(magSq / (t_iter_per_temp - t_burn_in))
 
     t_N += 1
     t = t_ini * pow(t_etha, t_N)
 
-suscept_arr = [(N_points / t_arr[t]) * (mag_sq_arr[t] - pow(mag_arr[t], 2)) for t in range(len(t_arr))]
+# save reversed arrays
+t_arr = np.array(t_arr)[::-1]
+mag_arr = np.array(mag_arr)[::-1]
+mag_sq_arr = np.array(mag_sq_arr)[::-1]
 
-t_arr = np.array(t_arr)
-mag_arr = np.array(mag_arr)
-mag_sq_arr = np.array(mag_sq_arr)
-suscept_arr = np.array(suscept_arr)
+# create susceptibility array
+suscept_arr = (N_points / t_arr) * (mag_sq_arr - pow(mag_arr, 2))
 
-plt.plot(suscept_arr)
+# write results to file
+results = {
+    'x_dim': x_dim,
+    'y_dim': y_dim,
+    'z_dim': z_dim,
+    'q': q,
+    't_iter_per_temp': t_iter_per_temp,
+    't_burn_in': t_burn_in,
+    't_per_min': t_per_min,
+    't_per_max': t_per_max,
+    't_etha': t_etha,
+    'k_neighbors': k_neighbors,
+    'wm_threshold': wm_threshold,
+    'N_points': N_points,
+    't_arr': t_arr,
+    'suscept_arr': suscept_arr
+}
 
+f = open('results/results_' + '{:%d%m%y%H%M}'.format(datetime.now()) + '.pkl', 'wb')
+pickle.dump(results, f)
+f.close()
 
-print("Finished!")
+end = time.time()
+
+print("Finished in {} seconds!".format(end - start))
 
 # "COMPLETED" until the beginning of the page 14 of the paper
