@@ -115,6 +115,8 @@ for vi in range(N_points):
         Cij['i'+str(vi)+'j'+str(vj)] = 0
 
 S = np.ones(N_points)  # Initialize S to ones
+SS = [[] for i in range(q)]
+SS[0] = list(range(N_points))
 
 t_index = 0 # keep track of the burned-in samples
 for t_i in range(t_iter):  # given iterations per temperature
@@ -135,11 +137,10 @@ for t_i in range(t_iter):  # given iterations per temperature
     for graph in subgraphs:
         new_q = np.random.randint(1, q+1)
         for node in graph.nodes():
+            SS[int(S[node])-1].remove(node)
+            SS[new_q-1].append(node)
             S[node] = new_q
 
-    SS = [[] for i in range(q)]
-    for i in range(N_points):
-        SS[int(S[i])].append(i)
 
     if t_index >= t_burn_in:
         for i in range(q):
