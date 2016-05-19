@@ -15,8 +15,8 @@ import pickle
 
 q = 20  # num. of pot spin variables
 
-t_iter_per_temp = 100  # num. of iterations per temperature
-t_burn_in = 10  # number of burn-in samples
+t_iter_per_temp = 10   # num. of iterations per temperature
+t_burn_in = 2  # number of burn-in samples
 t_per_min = 0.9  # min percentage from transition temperature
 t_per_max = 1.1  # max percentage from transition temperature
 t_etha = 0.99  # number of steps from min to max

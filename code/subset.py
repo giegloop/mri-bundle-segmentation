@@ -7,8 +7,18 @@ import networkx as nx
 from scipy import spatial as sc
 import itertools
 
-# max_diff_full = np.genfromtxt('data/embeddings', dtype='float64')
-# FA_full = np.genfromtxt('data/FA', dtype='float64')
+########################################################################################################################
+
+# dimension of wanted subset
+x_sub = [0, 209] # between 0 and 209
+y_sub = [0, 209] # between 0 and 209
+z_sub = [0, 129] # between 0 and 129
+
+########################################################################################################################
+
+# load full dataset
+max_diff_full = np.genfromtxt('data/embeddings', dtype='float64')
+FA_full = np.genfromtxt('data/FA', dtype='float64')
 
 # dimensions of original data
 x_dim = 210
@@ -20,11 +30,6 @@ index_to_xyz = list(itertools.product(*[list(range(0, x_dim)), list(range(0, y_d
 xyz_to_index = {}
 for i,v in enumerate(index_to_xyz):
     xyz_to_index[v] = i
-
-# dimension of wanted subset
-x_sub = [45, 70] # between 0 and 209
-y_sub = [45, 70] # between 0 and 209
-z_sub = [45, 70] # between 0 and 129
 
 x_dim_sub = x_sub[1] - x_sub[0] + 1
 y_dim_sub = y_sub[1] - y_sub[0] + 1
