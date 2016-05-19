@@ -15,15 +15,15 @@ import pickle
 
 q = 20  # num. of pot spin variables
 
-t_iter_per_temp = 10   # num. of iterations per temperature
-t_burn_in = 2  # number of burn-in samples
+t_iter_per_temp = 25   # num. of iterations per temperature
+t_burn_in = 5  # number of burn-in samples
 t_per_min = 0.9  # min percentage from transition temperature
 t_per_max = 1.1  # max percentage from transition temperature
-t_etha = 0.99  # number of steps from min to max
+t_etha = 0.96  # number of steps from min to max
 
 k_neighbors = 20  # number of nearest neighbors
 
-wm_threshold = 0.50  # threshold for white mass (FA > wm_threshold is considered white mass)
+wm_threshold = 0.5  # threshold for white mass (FA > wm_threshold is considered white mass)
 
 ########################################################################################################################
 
@@ -64,7 +64,7 @@ def dist_lat(i, j):
 
 # returns k-nearest neighbors with lattice distance within white matter
 def wm_neighbors(i, k):
-    dist = np.array([dist_lat(i, j) for j in range(N_points)])
+    dist = np.array([dist_lat(i, j) if i != j else np.float('infinity') for j in range(N_points)])
     return heapq.nsmallest(k, range(len(dist)), dist.take)
 
 

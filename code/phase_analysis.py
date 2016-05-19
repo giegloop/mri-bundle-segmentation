@@ -6,7 +6,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 
-id = str(1905161121)
+########################################################################################################################
+
+id = str(1905161610)  # id of the results to use for analysis
+
+########################################################################################################################
 
 f = open('results/results_' + id + '.pkl', 'rb')
 results = pickle.load(f)

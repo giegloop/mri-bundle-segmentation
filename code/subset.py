@@ -3,16 +3,14 @@ Create subset of the dataset
 """
 
 import numpy as np
-import networkx as nx
-from scipy import spatial as sc
 import itertools
 
 ########################################################################################################################
 
 # dimension of wanted subset
-x_sub = [0, 209] # between 0 and 209
-y_sub = [0, 209] # between 0 and 209
-z_sub = [0, 129] # between 0 and 129
+x_sub = [45, 70] # between 0 and 209
+y_sub = [45, 70] # between 0 and 209
+z_sub = [45, 70] # between 0 and 129
 
 ########################################################################################################################
 
