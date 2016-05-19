@@ -108,7 +108,7 @@ def j_cost(i, j):
 
 print("Starting Monte Carlo for t_superp = {}...".format(t_superp))
 
-print("Initiating Cij...")
+print("Initiating Cij and S...")
 Cij = {} # probability of finding sites i and j in the same cluster
 for vi in range(N_points):
     for vj in range(vi, N_points):
@@ -120,7 +120,7 @@ SS[0] = list(range(N_points))
 
 t_index = 0 # keep track of the burned-in samples
 for t_i in range(t_iter):  # given iterations per temperature
-    print("It. {}/{} \t Started Iteration...")
+    print("It. {}/{} \t Started Iteration...".format(t_i+1, t_iter))
     G = nx.Graph()  # Initialize graph where we will store "frozen" bonds
     for i in range(N_points):
         G.add_node(i)
@@ -130,7 +130,6 @@ for t_i in range(t_iter):  # given iterations per temperature
         for j in neighbors:
             Jij = j_cost(i,j)
             pfij = (1 - np.exp(-Jij / t_superp)) if S[i] == S[j] else 0  # page 9 of the paper
-            print(pfij)
             if np.random.uniform(0, 1) < pfij:
                 G.add_edge(i, j)
 
@@ -142,8 +141,6 @@ for t_i in range(t_iter):  # given iterations per temperature
             SS[new_q-1].append(node)
             S[node] = new_q
 
-    print(S)
-
     if t_index >= t_burn_in:
         for i in range(q):
             print("It. {}/{} \t Cij {}/{}".format(t_i + 1, t_iter, i+1, q))
@@ -152,8 +149,6 @@ for t_i in range(t_iter):  # given iterations per temperature
                 for vj in SS[i]:
                     if vj > vi:
                         Cij['i'+str(vi)+'j'+str(vj)] += 1
-                    elif vj != vi:
-                        Cij['i'+str(vj)+'j'+str(vi)] += 1
 
     t_index += 1
 
