@@ -15,8 +15,8 @@ import pickle
 
 q = 20  # num. of pot spin variables
 
-t_iter_per_temp = 25   # num. of iterations per temperature
-t_burn_in = 5  # number of burn-in samples
+t_iter_per_temp = 5   # num. of iterations per temperature
+t_burn_in = 2  # number of burn-in samples
 t_per_min = 0.9  # min percentage from transition temperature
 t_per_max = 1.1  # max percentage from transition temperature
 t_etha = 0.96  # number of steps from min to max
@@ -70,21 +70,22 @@ def wm_neighbors(i, k):
 
 # computing nearest neighbors
 print("Computing nearest neighbors...")
-nearest_neighbors = []
+nearest_neighbors = set()
 for i in range(N_points):
     print("Computing nearest neighbors for {} of {}".format(i,N_points))
-    nearest_neighbors.append(wm_neighbors(i, k_neighbors))
+    for j in wm_neighbors(i, k_neighbors):
+        if i < j:
+            nearest_neighbors.add((i, j))
+        else:
+            nearest_neighbors.add((j, i))
 
+N_neighbors = len(nearest_neighbors)
 
 # returns average distance between all pairs i, j
 def compute_d_avg():
-    dists = np.empty(N_points)
-    dists_sq = np.empty(N_points)
-    for i in range(N_points):
-        print("Computing distance for {} of {}".format(i,N_points))
-        dist = np.array([dist_lat(i, j) for j in nearest_neighbors[i]])
-        dists[i] = np.mean(dist)
-        dists_sq[i] = np.mean(np.sqrt(dist))
+    dist = np.array([dist_lat(i, j) for (i, j) in nearest_neighbors])
+    dists = np.mean(dist)
+    dists_sq = np.mean(pow(dist, 2))
 
     return np.mean(dists), np.mean(dists_sq)
 
@@ -115,8 +116,8 @@ def j_cost(i, j):
     return j_proximity(i, j) * j_shape(i, j)
 
 t_trans = (1 / (4 * np.log(1 + np.sqrt(q)))) * np.exp(-dSq_avg / 2 * pow(d_avg, 2))  # page 14 of the paper
-t_ini = 1.1 * t_trans
-t_end = 0.9 * t_trans
+t_ini = 0.4
+t_end = 0
 
 print("Start Monte Carlo with t_start = {}, t_end = {}, etha = {}...".format(t_ini, t_end, t_etha))
 
@@ -140,15 +141,14 @@ while t > t_end:  # for each temperature
         for i in range(N_points):
             G.add_node(i)
 
-        for i in range(N_points):  # assign "frozen" bonds for neighbors
-            neighbors = nearest_neighbors[i]  # nearest_neighbors has te be calculated in advance
-            for j in neighbors:
-                Jij = j_cost(i,j)
-                pfij = (1 - np.exp(-Jij / t)) if S[i] == S[j] else 0  # page 9 of the paper
-                if np.random.uniform(0, 1) < pfij:
-                    G.add_edge(i, j)
+        for (i, j) in nearest_neighbors:  # nearest_neighbors has te be calculated in advance
+            Jij = j_cost(i,j)
+            pfij = (1 - np.exp(-Jij / t)) if S[i] == S[j] else 0  # page 9 of the paper
+            if np.random.uniform(0, 1) < pfij:
+                G.add_edge(i, j)
 
         subgraphs = list(nx.connected_component_subgraphs(G))  # find SW-clusters
+        print("{} subgraphs".format(len(subgraphs)))
         for graph in subgraphs:
             new_q = np.random.randint(1, q+1)
             for node in graph.nodes():

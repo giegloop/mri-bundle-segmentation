@@ -11,7 +11,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 ########################################################################################################################
 
-id = str(1905162135)  # id of the results to use for analysis
+id = str(1905162234)  # id of the results to use for analysis
 
 ########################################################################################################################
 
@@ -64,4 +64,10 @@ for i in range(N_points):
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-ax.scatter(x[clusters], y[clusters], z[clusters], c=colors[clusters])
+i = 3
+ax.scatter(x[clusters==i], y[clusters==i], z[clusters==i], c=colors[clusters==i])
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+i = 2
+ax.scatter(x[clusters==i], y[clusters==i], z[clusters==i], c=colors[clusters==i])

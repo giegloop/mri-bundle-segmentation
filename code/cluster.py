@@ -9,7 +9,7 @@ import pickle
 
 ########################################################################################################################
 
-t_superp = 0.043096662782047483 # temperature in superparamagnetic phase
+t_superp = 0.5 # temperature in superparamagnetic phase
 
 t_iter = 25 # num. of iterations MC algorithm
 t_burn_in = 5  # number of burn-in samples
@@ -145,7 +145,6 @@ for t_i in range(t_iter):  # given iterations per temperature
     if t_index >= t_burn_in:
         for i in range(q):
             print("It. {}/{} \t Cij {}/{}".format(t_i + 1, t_iter, i+1, q))
-            subsets = set(itertools.combinations(SS[i], 2))
             for vi in SS[i]:
                 for vj in SS[i]:
                     if vj > vi:
