@@ -11,15 +11,12 @@ import pickle
 
 t_superp = 0.043096662782047483 # temperature in superparamagnetic phase
 
-t_iter = 100 # num. of iterations MC algorithm
-t_burn_in = 10  # number of burn-in samples
+t_iter = 25 # num. of iterations MC algorithm
+t_burn_in = 5  # number of burn-in samples
 
 q = 20  # num. of pot spin variables
-
 k_neighbors = 20  # number of nearest neighbors
-
 wm_threshold = 0.5  # threshold for white mass (FA > wm_threshold is considered white mass)
-
 Gij_threshold = 0.5 # threshold for "core" clusters, section 4.3.2 of the paper
 
 ########################################################################################################################
@@ -109,18 +106,21 @@ def j_cost(i, j):
     return j_proximity(i, j) * j_shape(i, j)
 
 
-print("Start Monte Carlo for t_superp = {}...".format(t_superp))
+print("Starting Monte Carlo for t_superp = {}...".format(t_superp))
 
+print("Initiating Cij...")
 Cij = {} # probability of finding sites i and j in the same cluster
 for vi in range(N_points):
     for vj in range(vi, N_points):
         Cij['i'+str(vi)+'j'+str(vj)] = 0
 
 S = np.ones(N_points)  # Initialize S to ones
+SS = [[] for i in range(q)]
+SS[0] = list(range(N_points))
 
 t_index = 0 # keep track of the burned-in samples
-for i in range(t_iter):  # given iterations per temperature
-    print("\t Iteration: {}/{}".format(i + 1, t_iter))
+for t_i in range(t_iter):  # given iterations per temperature
+    print("It. {}/{} \t Started Iteration...")
     G = nx.Graph()  # Initialize graph where we will store "frozen" bonds
     for i in range(N_points):
         G.add_node(i)
@@ -130,6 +130,7 @@ for i in range(t_iter):  # given iterations per temperature
         for j in neighbors:
             Jij = j_cost(i,j)
             pfij = (1 - np.exp(-Jij / t_superp)) if S[i] == S[j] else 0  # page 9 of the paper
+            print(pfij)
             if np.random.uniform(0, 1) < pfij:
                 G.add_edge(i, j)
 
@@ -137,22 +138,32 @@ for i in range(t_iter):  # given iterations per temperature
     for graph in subgraphs:
         new_q = np.random.randint(1, q+1)
         for node in graph.nodes():
+            SS[int(S[node])-1].remove(node)
+            SS[new_q-1].append(node)
             S[node] = new_q
 
+    print(S)
+
     if t_index >= t_burn_in:
-        for vi in range(N_points):
-            for vj in range(vi, N_points):
-                for graph in subgraphs:
-                    if vi in graph.nodes() and vj in graph.nodes(): # add 1 to count if nodes are in the same SW-cluster
+        for i in range(q):
+            print("It. {}/{} \t Cij {}/{}".format(t_i + 1, t_iter, i+1, q))
+            subsets = set(itertools.combinations(SS[i], 2))
+            for vi in SS[i]:
+                for vj in SS[i]:
+                    if vj > vi:
                         Cij['i'+str(vi)+'j'+str(vj)] += 1
+                    elif vj != vi:
+                        Cij['i'+str(vj)+'j'+str(vi)] += 1
 
     t_index += 1
 
+print("Computing estimated probabilities...")
 # average and obtain estimated probabilities
 for vi in range(N_points):
     for vj in range(vi, N_points):
         Cij['i'+str(vi)+'j'+str(vj)] /= (t_iter-t_burn_in)
 
+print("Computing spin-spin correlation...")
 # calculate spin-spin correlation function Gij, (11) in the paper
 Gij = {}
 for vi in range(N_points):
@@ -160,7 +171,7 @@ for vi in range(N_points):
         Gij['i'+str(vi)+'j'+str(vj)] = ((q-1)*Cij['i'+str(vi)+'j'+str(vj)]+1)/q
 
 # initialize graph where we are going to construct our final clustering
-print("Construct final graph and calculate clustering")
+print("Construct final graph and calculate clustering...")
 G = nx.Graph()
 
 for i in range(N_points):
@@ -189,7 +200,7 @@ for vi in range(N_points): # capture points lying in the periphery
 
 
 # return final clustering
-print("Formatting output")
+print("Formatting output...")
 clusters = np.empty(N_points)
 cluster_id = 1
 for graph in list(nx.connected_component_subgraphs(G)):

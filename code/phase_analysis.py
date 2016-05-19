@@ -16,4 +16,6 @@ f = open('results/results_' + id + '.pkl', 'rb')
 results = pickle.load(f)
 
 # show susceptibility plot
+# plt.scatter(results['suscept_arr'], results['suscept_arr'])
 plt.plot(results['t_arr'], pow(results['suscept_arr'], results['t_arr']) / results['N_points'])
+# plt.plot(results['t_arr'], results['suscept_arr'], linestyle="",marker="o")
