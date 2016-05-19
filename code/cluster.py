@@ -115,12 +115,12 @@ for vi in range(N_points):
         Cij['i'+str(vi)+'j'+str(vj)] = 0
 
 S = np.ones(N_points)  # Initialize S to ones
-SS = [[] for i in range(q)]
-SS[0] = list(range(N_points))
 
 t_index = 0 # keep track of the burned-in samples
 for t_i in range(t_iter):  # given iterations per temperature
     print("It. {}/{} \t Started Iteration...".format(t_i+1, t_iter))
+    SS = [[] for i in range(q)] # initialize SS
+    
     G = nx.Graph()  # Initialize graph where we will store "frozen" bonds
     for i in range(N_points):
         G.add_node(i)
@@ -137,7 +137,6 @@ for t_i in range(t_iter):  # given iterations per temperature
     for graph in subgraphs:
         new_q = np.random.randint(1, q+1)
         for node in graph.nodes():
-            SS[int(S[node])-1].remove(node)
             SS[new_q-1].append(node)
             S[node] = new_q
 
