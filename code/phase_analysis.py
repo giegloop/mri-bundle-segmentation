@@ -1,3 +1,7 @@
+"""
+Create a plot of the susceptibility for phase analysis
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle

@@ -1,3 +1,7 @@
+"""
+Svendsen-Wang Algorithm
+"""
+
 import numpy as np
 import networkx as nx
 from scipy import spatial as sc
@@ -9,32 +13,30 @@ import pickle
 
 ########################################################################################################################
 
-x_dim = 41  # x dimension of original data
-y_dim = 41  # y dimension of original data
-z_dim = 91  # z dimension of original data
-
 q = 20  # num. of pot spin variables
 
-t_iter_per_temp = 1  # num. of iterations per temperature
-t_burn_in = 0  # number of burn-in samples
-
+t_iter_per_temp = 100  # num. of iterations per temperature
+t_burn_in = 10  # number of burn-in samples
 t_per_min = 0.9  # min percentage from transition temperature
 t_per_max = 1.1  # max percentage from transition temperature
-t_etha = 0.996  # number of steps from min to max
+t_etha = 0.99  # number of steps from min to max
 
 k_neighbors = 20  # number of nearest neighbors
 
-wm_threshold = 0.34  # threshold for white mass (FA > wm_threshold is considered white mass)
+wm_threshold = 0.50  # threshold for white mass (FA > wm_threshold is considered white mass)
 
 ########################################################################################################################
 
 start = time.time()
 
 # load data with maximum diffusion and fractional anisotropy
-# max_diff = np.genfromtxt('data/embeddings', dtype='float64')
-# FA = np.genfromtxt('data/FA', dtype='float64')
 max_diff = np.load("data/max_diff_sub.npy")
 FA = np.load("data/FA_sub.npy")
+size = np.load("data/dim_sub.npy")
+
+x_dim = size[0]  # x dimension of original data
+y_dim = size[1]  # y dimension of original data
+z_dim = size[2]  # z dimension of original data
 
 # save some values for recovering xyz values by index of reduced dataset
 xyz = list(itertools.product(*[list(range(0, x_dim)), list(range(0, y_dim)), list(range(0, z_dim))]))
@@ -60,14 +62,18 @@ def dist_lat(i, j):
     return sc.distance.euclidean(p1, p2)
 
 
-# returns k-nearest neighbours with lattice distance within white matter
+# returns k-nearest neighbors with lattice distance within white matter
 def wm_neighbors(i, k):
     dist = np.array([dist_lat(i, j) for j in range(N_points)])
     return heapq.nsmallest(k, range(len(dist)), dist.take)
 
 
-print("Computing nearest neighbours...")
-nearest_neighbors = np.array([wm_neighbors(i, k_neighbors) for i in range(N_points)])
+# computing nearest neighbors
+print("Computing nearest neighbors...")
+nearest_neighbors = []
+for i in range(N_points):
+    print("Computing nearest neighbors for {} of {}".format(i,N_points))
+    nearest_neighbors.append(wm_neighbors(i, k_neighbors))
 
 
 # returns average distance between all pairs i, j
@@ -75,6 +81,7 @@ def compute_d_avg():
     dists = np.empty(N_points)
     dists_sq = np.empty(N_points)
     for i in range(N_points):
+        print("Computing distance for {} of {}".format(i,N_points))
         dist = np.array([dist_lat(i, j) for j in nearest_neighbors[i]])
         dists[i] = np.mean(dist)
         dists_sq[i] = np.mean(np.sqrt(dist))
@@ -83,7 +90,7 @@ def compute_d_avg():
 
 
 # compute average distance
-print("Counting average distance...")
+print("Computing average distances between neighbors...")
 d_avg, dSq_avg = compute_d_avg()
 
 # cosine distance between two vectors from max_diff
@@ -118,14 +125,14 @@ mag_sq_arr = []  # array with average squared magnetation of each time
 t_arr = []  # array with average squared magnetation of each time
 
 
-t_N = 1
+t_N = 0
 t = t_ini * pow(t_etha, t_N)
-t_index = 0
 while t > t_end:  # for each temperature
     print("Time: {}".format(t))
     S = np.ones(N_points)  # Initialize S to ones
     mag = 0
     magSq = 0
+    t_index = 0
 
     for i in range(t_iter_per_temp):  # given iterations per temperature
         print("\t Iteration: {}/{}".format(i + 1, t_iter_per_temp))
