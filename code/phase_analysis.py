@@ -8,14 +8,18 @@ import pickle
 
 ########################################################################################################################
 
-id = str(1905161638)  # id of the results to use for analysis
+id = str(2005160620)  # id of the results to use for analysis
 
 ########################################################################################################################
 
 f = open('results/results_' + id + '.pkl', 'rb')
 results = pickle.load(f)
 
-# show susceptibility plot
-# plt.scatter(results['suscept_arr'], results['suscept_arr'])
-plt.plot(results['t_arr'], pow(results['suscept_arr'], results['t_arr']) / results['N_points'])
-# plt.plot(results['t_arr'], results['suscept_arr'], linestyle="",marker="o")
+plt.figure(1)
+ax1 = plt.subplot(211)
+ax1.plot(results['t_arr'], results['suscept_arr'])
+plt.title("Susceptibility")
+
+ax2 = plt.subplot(212)
+ax2.plot(results['t_arr'], pow(results['suscept_arr'], results['t_arr']) / results['N_points'])
+plt.title("Susceptibility Density")

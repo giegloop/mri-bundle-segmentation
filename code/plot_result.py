@@ -7,11 +7,13 @@ import matplotlib.pyplot as plt
 import pickle
 import itertools
 import colorsys
+import heapq
 from mpl_toolkits.mplot3d import Axes3D
 
 ########################################################################################################################
 
-id = str(1905162234)  # id of the results to use for analysis
+id = str(2005161333)  # id of the results to use for analysis
+N_clusters_red = 10  # number of clusters to show
 
 ########################################################################################################################
 
@@ -26,11 +28,7 @@ z_dim = size[2]  # z dimension of original data
 wm_threshold = results["wm_threshold"]  # threshold for white mass (FA > wm_threshold is considered white mass)
 clusters = results["clusters"]
 
-########################################################################################################################
-
 # load data with maximum diffusion and fractional anisotropy
-# max_diff = np.genfromtxt('data/embeddings', dtype='float64')
-# FA = np.genfromtxt('data/FA', dtype='float64')
 max_diff = np.load("data/max_diff_sub.npy")
 FA = np.load("data/FA_sub.npy")
 
@@ -42,13 +40,20 @@ wm_range = [i for i in range(x_dim * y_dim * z_dim) if FA[i] > wm_threshold]
 max_diff = max_diff[FA > wm_threshold]
 FA = FA[FA > wm_threshold]
 
+
 # set dimension to length of reduced dataset
 N_points = len(max_diff)
-N_clusters = 20
+N_clusters = len(np.unique(clusters))
 
-HSV_tuples = [(x*1.0/N_clusters, 0.5, 0.5) for x in range(N_clusters)]
+count = np.array([len(clusters[clusters==i]) for i in range(N_clusters)])
+count_indexes = heapq.nlargest(N_clusters_red, range(len(count)), count.take)
+plot_indexes = np.array([i in count_indexes for i in clusters])
+
+HSV_tuples = [(x*1.0/N_clusters_red, 0.5, 0.5) for x in range(N_clusters_red)]
 RGB_tuples = list(map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples))
-colors = np.array([RGB_tuples[int(i-1)] for i in clusters])
+colors = np.array([RGB_tuples[count_indexes.index(i)] if i in count_indexes else (0,0,0) for i in clusters])
+
+
 
 def index_to_xyz(i):
     return xyz[wm_range[i]]
@@ -62,12 +67,18 @@ for i in range(N_points):
     y[i] = index[1]
     z[i] = index[2]
 
-fig = plt.figure()
+fig = plt.figure(1)
 ax = fig.add_subplot(111, projection='3d')
-i = 3
-ax.scatter(x[clusters==i], y[clusters==i], z[clusters==i], c=colors[clusters==i])
+ax.scatter(x[plot_indexes], y[plot_indexes], z[plot_indexes], s=50, c=colors[plot_indexes])
+ax.set_xlim3d(0,26)
+ax.set_ylim3d(0,26)
+ax.set_zlim3d(0,26)
 
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-i = 2
-ax.scatter(x[clusters==i], y[clusters==i], z[clusters==i], c=colors[clusters==i])
+# fig2 = plt.figure(2)
+# ax = fig2.add_subplot(111, projection='3d')
+# ax.scatter(x, y, z)
+# ax.set_xlim3d(0,26)
+# ax.set_ylim3d(0,26)
+# ax.set_zlim3d(0,26)
+
+# ax.scatter(x, y, z, c=colors)

@@ -15,8 +15,8 @@ import pickle
 
 q = 20  # num. of pot spin variables
 
-t_iter_per_temp = 5   # num. of iterations per temperature
-t_burn_in = 2  # number of burn-in samples
+t_iter_per_temp = 110   # num. of iterations per temperature
+t_burn_in = 10  # number of burn-in samples
 t_per_min = 0.9  # min percentage from transition temperature
 t_per_max = 1.1  # max percentage from transition temperature
 t_etha = 0.96  # number of steps from min to max
@@ -34,9 +34,9 @@ max_diff = np.load("data/max_diff_sub.npy")
 FA = np.load("data/FA_sub.npy")
 size = np.load("data/dim_sub.npy")
 
-x_dim = size[0]  # x dimension of original data
-y_dim = size[1]  # y dimension of original data
-z_dim = size[2]  # z dimension of original data
+x_dim = size[0]  # x dimension of subset
+y_dim = size[1]  # y dimension of subset
+z_dim = size[2]  # z dimension of subset
 
 # save some values for recovering xyz values by index of reduced dataset
 xyz = list(itertools.product(*[list(range(0, x_dim)), list(range(0, y_dim)), list(range(0, z_dim))]))
@@ -70,65 +70,52 @@ def wm_neighbors(i, k):
 
 # computing nearest neighbors
 print("Computing nearest neighbors...")
-nearest_neighbors = set()
+nn = set()
 for i in range(N_points):
     print("Computing nearest neighbors for {} of {}".format(i,N_points))
     for j in wm_neighbors(i, k_neighbors):
         if i < j:
-            nearest_neighbors.add((i, j))
+            nn.add((i, j))
         else:
-            nearest_neighbors.add((j, i))
+            nn.add((j, i))
 
-N_neighbors = len(nearest_neighbors)
-
-# returns average distance between all pairs i, j
-def compute_d_avg():
-    dist = np.array([dist_lat(i, j) for (i, j) in nearest_neighbors])
-    dists = np.mean(dist)
-    dists_sq = np.mean(pow(dist, 2))
-
-    return np.mean(dists), np.mean(dists_sq)
-
+nn = list(nn)
+N_neighbors = len(nn)
 
 # compute average distance
-print("Computing average distances between neighbors...")
-d_avg, dSq_avg = compute_d_avg()
-
-# cosine distance between two vectors from max_diff
-def j_shape(i, j):
-    v_i = max_diff[i]
-    v_j = max_diff[j]
-
-    return 2 - np.abs(np.dot(v_i, v_j) / (sc.distance.norm(v_i) * sc.distance.norm(v_j)))
-
-
-# proximity function for two vectors from max_diff
-def j_proximity(i, j):
-    return 1 / k_neighbors * (dist_lat(i, j) / (2 * d_avg))
-
+print("Computing (average) distances between neighbors...")
+nn_dist = np.array([dist_lat(i, j) for (i, j) in nn])
+d_avg = np.mean(nn_dist)
+dSq_avg = np.mean(pow(nn_dist, 2))
 
 # Jij is the cost of considering coupled object i and object j. Here we use the
 # maximum diffusion directions and the fractional anisotropy of each 3d pixel
 # as a compression of the original data, as motivated from
 # Diffusion Tensor MR Imaging and Fiber Tractography: Theoretic Underpinnings
 # by P. Mukherjee, J.I. Berman, S.W. Chung, C.P. Hess R.G. Henry.
-def j_cost(i, j):
-    return j_proximity(i, j) * j_shape(i, j)
+def j_cost(nn_index):
+    (i, j) = nn[nn_index]
+    vi = max_diff[i]
+    vj = max_diff[j]
+    j_shape = 1 - np.abs(np.dot(vi, vj) / (sc.distance.norm(vi) * sc.distance.norm(vj)))
+    j_proximity = 1 / k_neighbors * (nn_dist[nn_index] / (2 * d_avg))
+
+    return j_shape * j_proximity
+
+print("Computing Jij for all neighbors...")
+nn_jij = np.array([j_cost(nn_index) for nn_index in range(N_neighbors)])
 
 t_trans = (1 / (4 * np.log(1 + np.sqrt(q)))) * np.exp(-dSq_avg / 2 * pow(d_avg, 2))  # page 14 of the paper
-t_ini = 0.4
-t_end = 0
+t_ini = t_per_min * t_trans
+t_end = t_per_max * t_trans
 
 print("Start Monte Carlo with t_start = {}, t_end = {}, etha = {}...".format(t_ini, t_end, t_etha))
 
 mag_arr = []  # array with average magnetation of each time
 mag_sq_arr = []  # array with average squared magnetation of each time
-t_arr = []  # array with average squared magnetation of each time
+t_arr = np.arange(t_ini, t_end, (t_end - t_ini) / 60)  # range of times to loop over
 
-
-t_N = 0
-t = t_ini * pow(t_etha, t_N)
-while t > t_end:  # for each temperature
+for t in t_arr:  # for each temperature
     print("Time: {}".format(t))
     S = np.ones(N_points)  # Initialize S to ones
     mag = 0
@@ -141,9 +128,8 @@ while t > t_end:  # for each temperature
         for i in range(N_points):
             G.add_node(i)
 
-        for (i, j) in nearest_neighbors:  # nearest_neighbors has te be calculated in advance
-            Jij = j_cost(i,j)
-            pfij = (1 - np.exp(-Jij / t)) if S[i] == S[j] else 0  # page 9 of the paper
+        for nn_index, (i, j) in enumerate(nn):  # nearest_neighbors has te be calculated in advance
+            pfij = (1 - np.exp(-nn_jij[nn_index] / t)) if S[i] == S[j] else 0  # page 9 of the paper
             if np.random.uniform(0, 1) < pfij:
                 G.add_edge(i, j)
 
@@ -168,17 +154,8 @@ while t > t_end:  # for each temperature
 
         t_index += 1
 
-    t_arr.append(t)
     mag_arr.append(mag / (t_iter_per_temp - t_burn_in))
     mag_sq_arr.append(magSq / (t_iter_per_temp - t_burn_in))
-
-    t_N += 1
-    t = t_ini * pow(t_etha, t_N)
-
-# save reversed arrays
-t_arr = np.array(t_arr)[::-1]
-mag_arr = np.array(mag_arr)[::-1]
-mag_sq_arr = np.array(mag_sq_arr)[::-1]
 
 # create susceptibility array
 suscept_arr = (N_points / t_arr) * (mag_sq_arr - pow(mag_arr, 2))
