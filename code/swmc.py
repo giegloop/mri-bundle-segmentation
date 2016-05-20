@@ -15,8 +15,8 @@ import pickle
 
 q = 20  # num. of pot spin variables
 
-t_iter_per_temp = 110   # num. of iterations per temperature
-t_burn_in = 10  # number of burn-in samples
+t_iter_per_temp = 250   # num. of iterations per temperature
+t_burn_in = 20  # number of burn-in samples
 t_per_min = 0.9  # min percentage from transition temperature
 t_per_max = 1.1  # max percentage from transition temperature
 t_etha = 0.96  # number of steps from min to max
@@ -106,8 +106,8 @@ print("Computing Jij for all neighbors...")
 nn_jij = np.array([j_cost(nn_index) for nn_index in range(N_neighbors)])
 
 t_trans = (1 / (4 * np.log(1 + np.sqrt(q)))) * np.exp(-dSq_avg / 2 * pow(d_avg, 2))  # page 14 of the paper
-t_ini = t_per_min * t_trans
-t_end = t_per_max * t_trans
+t_ini = 0.015
+t_end = 0.05
 
 print("Start Monte Carlo with t_start = {}, t_end = {}, etha = {}...".format(t_ini, t_end, t_etha))
 
@@ -157,6 +157,8 @@ for t in t_arr:  # for each temperature
     mag_arr.append(mag / (t_iter_per_temp - t_burn_in))
     mag_sq_arr.append(magSq / (t_iter_per_temp - t_burn_in))
 
+mag_arr = np.array(mag_arr)
+
 # create susceptibility array
 suscept_arr = (N_points / t_arr) * (mag_sq_arr - pow(mag_arr, 2))
 
@@ -178,12 +180,14 @@ results = {
     'suscept_arr': suscept_arr
 }
 
-f = open('results/results_' + '{:%d%m%y%H%M}'.format(datetime.now()) + '.pkl', 'wb')
+id = '{:%d%m%y%H%M}'.format(datetime.now())
+f = open('results/results_' + id + '.pkl', 'wb')
 pickle.dump(results, f)
 f.close()
 
 end = time.time()
 
 print("Finished in {} seconds!".format(end - start))
+print("Exported with id {}".format(id))
 
 # "COMPLETED" until the beginning of the page 14 of the paper
