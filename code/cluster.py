@@ -7,15 +7,16 @@ import time
 from datetime import datetime
 import pickle
 
+import matplotlib.pyplot as plt
 ########################################################################################################################
 
-t_superp = 0.05 # temperature in superparamagnetic phase
+t_superp = 0.11  # temperature in superparamagnetic phase
 
-t_iter = 500 # num. of iterations MC algorithm
-t_burn_in = 50  # number of burn-in samples
+t_iter = 300 # num. of iterations MC algorithm
+t_burn_in = 100  # number of burn-in samples
 
-q = 20  # num. of pot spin variables
-k_neighbors = 20  # number of nearest neighbors
+q = 50  # num. of pot spin variables
+k_neighbors = 25  # number of nearest neighbors
 wm_threshold = 0.5  # threshold for white mass (FA > wm_threshold is considered white mass)
 Gij_threshold = 0.5 # threshold for "core" clusters, section 4.3.2 of the paper
 
@@ -28,9 +29,7 @@ max_diff = np.load("data/max_diff_sub.npy")
 FA = np.load("data/FA_sub.npy")
 size = np.load("data/dim_sub.npy")
 
-x_dim = size[0]  # x dimension of subset
-y_dim = size[1]  # y dimension of subset
-z_dim = size[2]  # z dimension of subset
+(x_dim, y_dim, z_dim) = size
 
 # save some values for recovering xyz values by index of reduced dataset
 xyz = list(itertools.product(*[list(range(0, x_dim)), list(range(0, y_dim)), list(range(0, z_dim))]))
@@ -95,9 +94,8 @@ def j_cost(nn_index):
     (i, j) = nn[nn_index]
     vi = max_diff[i]
     vj = max_diff[j]
-    j_shape = 1 - np.abs(np.dot(vi, vj) / (sc.distance.norm(vi) * sc.distance.norm(vj)))
-    j_proximity = 1 / k_neighbors * (nn_dist[nn_index] / (2 * d_avg))
-
+    j_shape = - np.abs(np.dot(vi, vj) / (sc.distance.norm(vi) * sc.distance.norm(vj)))
+    j_proximity = (1 / k_neighbors) * np.exp(pow(nn_dist[nn_index], 2) / (2 * pow(d_avg, 2)))
     return j_shape * j_proximity
 
 print("Computing Jij for all neighbors...")
@@ -147,10 +145,6 @@ print("Computing estimated probabilities...")
 # average and obtain estimated probabilities
 Cij = [i / (t_iter - t_burn_in) for i in Cij]
 
-print("Computing spin-spin correlation...")
-# calculate spin-spin correlation function Gij, (11) in the paper
-Gij = [((q-1)*i+1)/q for i in Cij]
-
 # initialize graph where we are going to construct our final clustering
 print("Construct final graph and calculate clustering...")
 G = nx.Graph()
@@ -158,19 +152,19 @@ G = nx.Graph()
 for i in range(N_points):
     G.add_node(i)
 
-for nn_index, g in enumerate(Gij):
+for nn_index, g in enumerate(Cij):
     (i, j) = nn[nn_index]
     if g > Gij_threshold:
         G.add_edge(i, j)
 
-Gij_current = [0 for i in range(N_points)]
+Cij_current = [0 for i in range(N_points)]
 best_neighbour = [0 for i in range(N_points)]
 for nn_index, (vi, vj) in enumerate(nn): # capture points lying in the periphery
-    if Gij[nn_index] > Gij_current[vi]:
-        Gij_current[vi] = Gij[nn_index]
+    if Cij[nn_index] > Cij_current[vi]:
+        Cij_current[vi] = Cij[nn_index]
         best_neighbour[vi] = vj
-    if Gij[nn_index] > Gij_current[vj]:
-        Gij_current[vj] = Gij[nn_index]
+    if Cij[nn_index] > Cij_current[vj]:
+        Cij_current[vj] = Cij[nn_index]
         best_neighbour[vj] = vi
 
 for vi, vj in enumerate(best_neighbour):

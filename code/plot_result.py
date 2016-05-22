@@ -12,8 +12,8 @@ from mpl_toolkits.mplot3d import Axes3D
 
 ########################################################################################################################
 
-id = str(2005161333)  # id of the results to use for analysis
-N_clusters_red = 10  # number of clusters to show
+id = str(2205162331)  # id of the results to use for analysis
+N_clusters_red = 20   # number of clusters to show
 
 ########################################################################################################################
 
@@ -69,10 +69,10 @@ for i in range(N_points):
 
 fig = plt.figure(1)
 ax = fig.add_subplot(111, projection='3d')
-ax.scatter(x[plot_indexes], y[plot_indexes], z[plot_indexes], s=50, c=colors[plot_indexes])
-ax.set_xlim3d(0,26)
-ax.set_ylim3d(0,26)
-ax.set_zlim3d(0,26)
+ax.scatter(x[plot_indexes], y[plot_indexes], z[plot_indexes],depthshade=False, s=70, c=colors[plot_indexes])
+ax.set_xlim3d(0,x_dim)
+ax.set_ylim3d(0,y_dim)
+ax.set_zlim3d(0,z_dim)
 
 # fig2 = plt.figure(2)
 # ax = fig2.add_subplot(111, projection='3d')

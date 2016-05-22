@@ -13,15 +13,12 @@ import pickle
 
 ########################################################################################################################
 
-q = 20  # num. of pot spin variables
+q = 50  # num. of pot spin variables
 
-t_iter_per_temp = 250   # num. of iterations per temperature
-t_burn_in = 20  # number of burn-in samples
-t_per_min = 0.9  # min percentage from transition temperature
-t_per_max = 1.1  # max percentage from transition temperature
-t_etha = 0.96  # number of steps from min to max
+t_iter_per_temp = 100   # num. of iterations per temperature
+t_burn_in = 30  # number of burn-in samples
 
-k_neighbors = 20  # number of nearest neighbors
+k_neighbors = 25  # number of nearest neighbors
 
 wm_threshold = 0.5  # threshold for white mass (FA > wm_threshold is considered white mass)
 
@@ -34,12 +31,13 @@ max_diff = np.load("data/max_diff_sub.npy")
 FA = np.load("data/FA_sub.npy")
 size = np.load("data/dim_sub.npy")
 
-x_dim = size[0]  # x dimension of subset
-y_dim = size[1]  # y dimension of subset
-z_dim = size[2]  # z dimension of subset
+# set size to dimensions of subset
+(x_dim, y_dim, z_dim) = size
 
-# save some values for recovering xyz values by index of reduced dataset
+# create array of all possible (x,y,z) within subset
 xyz = list(itertools.product(*[list(range(0, x_dim)), list(range(0, y_dim)), list(range(0, z_dim))]))
+
+# remember indices of white matter in original dataset
 wm_range = [i for i in range(x_dim * y_dim * z_dim) if FA[i] > wm_threshold]
 
 # remove all non-white mass from dataset
@@ -88,6 +86,7 @@ nn_dist = np.array([dist_lat(i, j) for (i, j) in nn])
 d_avg = np.mean(nn_dist)
 dSq_avg = np.mean(pow(nn_dist, 2))
 
+
 # Jij is the cost of considering coupled object i and object j. Here we use the
 # maximum diffusion directions and the fractional anisotropy of each 3d pixel
 # as a compression of the original data, as motivated from
@@ -97,25 +96,25 @@ def j_cost(nn_index):
     (i, j) = nn[nn_index]
     vi = max_diff[i]
     vj = max_diff[j]
-    j_shape = 1 - np.abs(np.dot(vi, vj) / (sc.distance.norm(vi) * sc.distance.norm(vj)))
-    j_proximity = 1 / k_neighbors * (nn_dist[nn_index] / (2 * d_avg))
-
+    j_shape = - np.abs(np.dot(vi, vj) / (sc.distance.norm(vi) * sc.distance.norm(vj)))
+    j_proximity = (1 / k_neighbors) * np.exp(pow(nn_dist[nn_index], 2) / (2 * pow(d_avg, 2)))
     return j_shape * j_proximity
 
 print("Computing Jij for all neighbors...")
 nn_jij = np.array([j_cost(nn_index) for nn_index in range(N_neighbors)])
 
 t_trans = (1 / (4 * np.log(1 + np.sqrt(q)))) * np.exp(-dSq_avg / 2 * pow(d_avg, 2))  # page 14 of the paper
-t_ini = 0.015
-t_end = 0.05
+t_ini = 0.000001
+t_end = 0.3
+t_num_it = 50
 
-print("Start Monte Carlo with t_start = {}, t_end = {}, etha = {}...".format(t_ini, t_end, t_etha))
+print("Start Monte Carlo with t_start = {}, t_end = {}, steps = {}...".format(t_ini, t_end, t_num_it))
 
 mag_arr = []  # array with average magnetation of each time
 mag_sq_arr = []  # array with average squared magnetation of each time
-t_arr = np.arange(t_ini, t_end, (t_end - t_ini) / 60)  # range of times to loop over
+t_arr = np.arange(t_ini, t_end, (t_end - t_ini) / t_num_it)  # range of times to loop over
 
-for t in t_arr:  # for each temperature
+for t_i, t in enumerate(t_arr):  # for each temperature
     print("Time: {}".format(t))
     S = np.ones(N_points)  # Initialize S to ones
     mag = 0
@@ -123,7 +122,7 @@ for t in t_arr:  # for each temperature
     t_index = 0
 
     for i in range(t_iter_per_temp):  # given iterations per temperature
-        print("\t Iteration: {}/{}".format(i + 1, t_iter_per_temp))
+        print("\t Iteration: {}/{}, time {}/{}".format(i + 1, t_iter_per_temp, t_i, len(t_arr)))
         G = nx.Graph()  # Initialize graph where we will store "frozen" bonds
         for i in range(N_points):
             G.add_node(i)
@@ -134,7 +133,7 @@ for t in t_arr:  # for each temperature
                 G.add_edge(i, j)
 
         subgraphs = list(nx.connected_component_subgraphs(G))  # find SW-clusters
-        print("{} subgraphs".format(len(subgraphs)))
+        print("\t {} subgraphs".format(len(subgraphs)))
         for graph in subgraphs:
             new_q = np.random.randint(1, q+1)
             for node in graph.nodes():
@@ -158,6 +157,7 @@ for t in t_arr:  # for each temperature
     mag_sq_arr.append(magSq / (t_iter_per_temp - t_burn_in))
 
 mag_arr = np.array(mag_arr)
+mag_sq_arr = np.array(mag_sq_arr)
 
 # create susceptibility array
 suscept_arr = (N_points / t_arr) * (mag_sq_arr - pow(mag_arr, 2))
