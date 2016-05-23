@@ -15,8 +15,8 @@ import pickle
 
 q = 50  # num. of pot spin variables
 
-t_iter_per_temp = 100   # num. of iterations per temperature
-t_burn_in = 30  # number of burn-in samples
+t_iter_per_temp = 400   # num. of iterations per temperature
+t_burn_in = 50  # number of burn-in samples
 
 k_neighbors = 25  # number of nearest neighbors
 
@@ -76,7 +76,7 @@ for i in range(N_points):
             nn.add((i, j))
         else:
             nn.add((j, i))
-
+# nn = pickle.load(open('nn.pkl', 'rb'))
 nn = list(nn)
 N_neighbors = len(nn)
 
@@ -96,16 +96,16 @@ def j_cost(nn_index):
     (i, j) = nn[nn_index]
     vi = max_diff[i]
     vj = max_diff[j]
-    j_shape = - np.abs(np.dot(vi, vj) / (sc.distance.norm(vi) * sc.distance.norm(vj)))
-    j_proximity = (1 / k_neighbors) * np.exp(pow(nn_dist[nn_index], 2) / (2 * pow(d_avg, 2)))
-    return j_shape * j_proximity
+    j_shape = np.abs(np.dot(vi, vj) / (sc.distance.norm(vi) * sc.distance.norm(vj)))
+    # j_proximity = np.exp(- pow(nn_dist[nn_index], 2) / (2 * pow(d_avg, 2)))
+    return j_shape
 
 print("Computing Jij for all neighbors...")
 nn_jij = np.array([j_cost(nn_index) for nn_index in range(N_neighbors)])
 
 t_trans = (1 / (4 * np.log(1 + np.sqrt(q)))) * np.exp(-dSq_avg / 2 * pow(d_avg, 2))  # page 14 of the paper
-t_ini = 0.000001
-t_end = 0.3
+t_ini = 0.05
+t_end = 5
 t_num_it = 50
 
 print("Start Monte Carlo with t_start = {}, t_end = {}, steps = {}...".format(t_ini, t_end, t_num_it))
@@ -122,7 +122,7 @@ for t_i, t in enumerate(t_arr):  # for each temperature
     t_index = 0
 
     for i in range(t_iter_per_temp):  # given iterations per temperature
-        print("\t Iteration: {}/{}, time {}/{}".format(i + 1, t_iter_per_temp, t_i, len(t_arr)))
+        print("\t Iteration: {}/{}, time {}, {}/{}".format(i + 1, t_iter_per_temp, t, t_i, len(t_arr)))
         G = nx.Graph()  # Initialize graph where we will store "frozen" bonds
         for i in range(N_points):
             G.add_node(i)
@@ -170,9 +170,9 @@ results = {
     'q': q,
     't_iter_per_temp': t_iter_per_temp,
     't_burn_in': t_burn_in,
-    't_per_min': t_per_min,
-    't_per_max': t_per_max,
-    't_etha': t_etha,
+    't_per_min': t_ini,
+    't_per_max': t_end,
+    't_num_it': t_num_it,
     'k_neighbors': k_neighbors,
     'wm_threshold': wm_threshold,
     'N_points': N_points,

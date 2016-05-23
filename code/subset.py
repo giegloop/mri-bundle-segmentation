@@ -8,6 +8,12 @@ import itertools
 ########################################################################################################################
 
 # dimension of wanted subset
+# x_sub = [45, 70] # between 0 and 209
+# y_sub = [120, 145] # between 0 and 209
+# z_sub = [70, 95] # between 0 and 129
+# x_sub = [45, 70] # between 0 and 209
+# y_sub = [100, 125] # between 0 and 209
+# z_sub = [70, 95] # between 0 and 129
 x_sub = [45, 70] # between 0 and 209
 y_sub = [45, 70] # between 0 and 209
 z_sub = [45, 70] # between 0 and 129
