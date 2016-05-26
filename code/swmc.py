@@ -2,6 +2,8 @@
 Svendsen-Wang Algorithm
 """
 
+from joblib import Parallel, delayed
+import multiprocessing
 import numpy as np
 import networkx as nx
 from scipy import spatial as sc
@@ -13,18 +15,20 @@ import pickle
 
 ########################################################################################################################
 
-q = 50  # num. of pot spin variables
+q = 20  # num. of pot spin variables
 
-t_iter_per_temp = 400   # num. of iterations per temperature
+t_iter_per_temp = 200   # num. of iterations per temperature
 t_burn_in = 50  # number of burn-in samples
 
-k_neighbors = 25  # number of nearest neighbors
+k_neighbors = 10  # number of nearest neighbors
 
-wm_threshold = 0.5  # threshold for white mass (FA > wm_threshold is considered white mass)
+wm_threshold = 0.3  # threshold for white mass (FA > wm_threshold is considered white mass)
 
 ########################################################################################################################
 
 start = time.time()
+num_cores = multiprocessing.cpu_count()
+print("Number of cores: {}", num_cores)
 
 # load data with maximum diffusion and fractional anisotropy
 max_diff = np.load("data/max_diff_sub.npy")
@@ -67,16 +71,26 @@ def wm_neighbors(i, k):
 
 
 # computing nearest neighbors
-print("Computing nearest neighbors...")
-nn = set()
-for i in range(N_points):
+def compute_nearest_neighbors(i):
+    nn = []
     print("Computing nearest neighbors for {} of {}".format(i,N_points))
     for j in wm_neighbors(i, k_neighbors):
         if i < j:
-            nn.add((i, j))
+            nn.append((i, j))
         else:
-            nn.add((j, i))
-# nn = pickle.load(open('nn.pkl', 'rb'))
+            nn.append((j, i))
+    return nn
+
+# computing nearest neighbors with parallel computation
+print("Computing nearest neighbors...")
+n = Parallel(n_jobs=num_cores)(delayed(compute_nearest_neighbors)(i) for i in range(N_points))
+
+nn = set()
+print("Merging the sets..")
+for i in range(N_points):
+    for j in n[i]:
+        nn.add(j)
+
 nn = list(nn)
 N_neighbors = len(nn)
 
@@ -97,7 +111,6 @@ def j_cost(nn_index):
     vi = max_diff[i]
     vj = max_diff[j]
     j_shape = np.abs(np.dot(vi, vj) / (sc.distance.norm(vi) * sc.distance.norm(vj)))
-    # j_proximity = np.exp(- pow(nn_dist[nn_index], 2) / (2 * pow(d_avg, 2)))
     return j_shape
 
 print("Computing Jij for all neighbors...")
@@ -105,8 +118,8 @@ nn_jij = np.array([j_cost(nn_index) for nn_index in range(N_neighbors)])
 
 t_trans = (1 / (4 * np.log(1 + np.sqrt(q)))) * np.exp(-dSq_avg / 2 * pow(d_avg, 2))  # page 14 of the paper
 t_ini = 0.05
-t_end = 5
-t_num_it = 50
+t_end = 3
+t_num_it = 100
 
 print("Start Monte Carlo with t_start = {}, t_end = {}, steps = {}...".format(t_ini, t_end, t_num_it))
 
@@ -114,7 +127,8 @@ mag_arr = []  # array with average magnetation of each time
 mag_sq_arr = []  # array with average squared magnetation of each time
 t_arr = np.arange(t_ini, t_end, (t_end - t_ini) / t_num_it)  # range of times to loop over
 
-for t_i, t in enumerate(t_arr):  # for each temperature
+
+def temp_step(t_i, t):
     print("Time: {}".format(t))
     S = np.ones(N_points)  # Initialize S to ones
     mag = 0
@@ -146,18 +160,17 @@ for t_i, t in enumerate(t_arr):  # for each temperature
                 N_max = new_N_max
 
         new_mag = (q * N_max - N_points) / ((q - 1) * N_points)  # (4) in paper
-
         if t_index >= t_burn_in:
             mag += new_mag
             magSq += pow(new_mag, 2)
 
         t_index += 1
 
-    mag_arr.append(mag / (t_iter_per_temp - t_burn_in))
-    mag_sq_arr.append(magSq / (t_iter_per_temp - t_burn_in))
+    return mag / (t_iter_per_temp - t_burn_in), magSq / (t_iter_per_temp - t_burn_in)
 
-mag_arr = np.array(mag_arr)
-mag_sq_arr = np.array(mag_sq_arr)
+mag_new_arr = Parallel(n_jobs=num_cores)(delayed(temp_step)(t_i, t) for t_i, t in enumerate(t_arr))
+mag_arr = np.array([i[0] for i in mag_new_arr])
+mag_sq_arr = np.array([i[1] for i in mag_new_arr])
 
 # create susceptibility array
 suscept_arr = (N_points / t_arr) * (mag_sq_arr - pow(mag_arr, 2))

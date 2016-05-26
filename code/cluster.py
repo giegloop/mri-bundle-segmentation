@@ -10,14 +10,14 @@ import pickle
 import matplotlib.pyplot as plt
 ########################################################################################################################
 
-t_superp = 1.5  # temperature in superparamagnetic phase
+t_superp = 3.13  # temperature in superparamagnetic phase
 
 t_iter = 200  # num. of iterations MC algorithm
 t_burn_in = 50  # number of burn-in samples
 
-q = 50  # num. of pot spin variables
+q = 20  # num. of pot spin variables
 k_neighbors = 25  # number of nearest neighbors
-wm_threshold = 0.5  # threshold for white mass (FA > wm_threshold is considered white mass)
+wm_threshold = 0  # threshold for white mass (FA > wm_threshold is considered white mass)
 Gij_threshold = 0.5  # threshold for "core" clusters, section 4.3.2 of the paper
 
 ########################################################################################################################
@@ -61,7 +61,7 @@ def wm_neighbors(i, k):
     return heapq.nsmallest(k, range(len(dist)), dist.take)
 
 
-# computing nearest neighbors
+# # computing nearest neighbors
 print("Computing nearest neighbors...")
 nn = set()
 for i in range(N_points):
@@ -71,7 +71,7 @@ for i in range(N_points):
             nn.add((i, j))
         else:
             nn.add((j, i))
-# nn = pickle.load(open('nn.pkl', 'rb'))
+            
 nn = list(nn)
 N_neighbors = len(nn)
 
@@ -95,7 +95,6 @@ def j_cost(nn_index):
     vi = max_diff[i]
     vj = max_diff[j]
     j_shape = np.abs(np.dot(vi, vj) / (sc.distance.norm(vi) * sc.distance.norm(vj)))
-    # j_proximity = 1-np.exp(- pow(nn_dist[nn_index], 2) / (2 * pow(d_avg, 2)))
     return j_shape
 
 print("Computing Jij for all neighbors...")

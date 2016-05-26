@@ -12,8 +12,8 @@ from mpl_toolkits.mplot3d import Axes3D
 
 ########################################################################################################################
 
-id = str(2305161622)  # id of the results to use for analysis
-N_clusters_red = 20   # number of clusters to show
+id = str(2605160157)  # id of the results to use for analysis
+N_clusters_red = 10   # number of clusters to show
 
 ########################################################################################################################
 

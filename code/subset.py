@@ -21,6 +21,7 @@ z_sub = [45, 70] # between 0 and 129
 ########################################################################################################################
 
 # load full dataset
+print("Loading full dataset (this may take a while)...")
 max_diff_full = np.genfromtxt('data/embeddings', dtype='float64')
 FA_full = np.genfromtxt('data/FA', dtype='float64')
 
