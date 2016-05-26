@@ -17,25 +17,25 @@ import pickle
 # TYPE #
 ########################################################################################################################
 
-type = 'clustering' # either 'swmc' or 'clustering'
+type = 'swmc' # either 'swmc' or 'clustering'
 
 ########################################################################################################################
 # GENERAL #
 ########################################################################################################################
 
 q = 20  # num. of pot spin variables
-t_iter_per_temp = 500   # num. of iterations per temperature
-t_burn_in = 50  # number of burn-in samples
+mc_iterations = 500   # num. of iterations per MC
+mc_burn_in = 50  # number of burn-in samples for MC (must be < mc_iterations!)
 k_neighbors = 10  # number of nearest neighbors
-wm_threshold = 0.3  # threshold for white mass (FA > wm_threshold is considered white mass)
+wm_threshold = 0.7  # threshold for white mass (FA > wm_threshold is considered white mass)
 
 ########################################################################################################################
 # SWMC #
 ########################################################################################################################
 
-t_ini = 0.5
-t_end = 2.5
-t_num_it = 200
+t_ini = 0.5  # initial temperature
+t_end = 2.5  # final temperature (must be > t_ini!)
+t_num_it = 200  # number of iterations between initial and final temperature
 
 ########################################################################################################################
 # CLUSTERING #
@@ -46,7 +46,14 @@ Cij_threshold = 0.5  # threshold for "core" clusters, section 4.3.2 of the paper
 
 ########################################################################################################################
 
+if mc_burn_in >= mc_iterations:
+    raise Exception('The number of MC burn-in samples is higher or equal to the number of MC iterations. Change it!')
+if t_ini >= t_end:
+    raise Exception('The initial temperature is higher or equal then the final temperature. Change it!')
+
 start = time.time()
+
+# load number of cores for parallel processing
 num_cores = multiprocessing.cpu_count()
 print("Number of cores: {}", num_cores)
 
@@ -140,7 +147,6 @@ def j_cost(nn_index):
 print("Computing Jij for all neighbors...")
 nn_jij = np.array([j_cost(nn_index) for nn_index in range(N_neighbors)])
 
-
 if type == 'swmc':
     print("Start Monte Carlo with t_start = {}, t_end = {}, steps = {}...".format(t_ini, t_end, t_num_it))
 
@@ -148,52 +154,56 @@ if type == 'swmc':
     mag_sq_arr = []  # array with average squared magnetation of each time
     t_arr = np.arange(t_ini, t_end, (t_end - t_ini) / t_num_it)  # range of times to loop over
 
-
+    # function per temperature step for parallization purposes
     def temp_step(t_i, t):
         print("Time: {}".format(t))
-        S = np.ones(N_points)  # Initialize S to ones
-        mag = 0
-        magSq = 0
-        t_index = 0
 
-        for i in range(t_iter_per_temp):  # given iterations per temperature
-            print("\t Iteration: {}/{}, time {}, {}/{}".format(i + 1, t_iter_per_temp, t, t_i, len(t_arr)))
-            G = nx.Graph()  # Initialize graph where we will store "frozen" bonds
+        S = np.ones(N_points)  # initialize S to 1's (cluster assignment variable)
+        mag = 0  # initialize magnetization
+        mag_sq = 0  # initialize squared magnetization
+
+        # loop through MC iterations
+        for mc_index in range(mc_iterations):
+            print("\t Iteration: {}/{}, time {}, {}/{}".format(mc_index + 1, mc_iterations, t, t_i + 1, len(t_arr)))
+
+            # initialize graph where we will store "frozen" bonds
+            G = nx.Graph()
             for i in range(N_points):
                 G.add_node(i)
 
-            for nn_index, (i, j) in enumerate(nn):  # nearest_neighbors has te be calculated in advance
+            # loop over all neighbors and "freeze" edge with certain prob.
+            for nn_index, (i, j) in enumerate(nn):
                 pfij = (1 - np.exp(-nn_jij[nn_index] / t)) if S[i] == S[j] else 0  # page 9 of the paper
                 if np.random.uniform(0, 1) < pfij:
                     G.add_edge(i, j)
 
-            subgraphs = list(nx.connected_component_subgraphs(G))  # find SW-clusters
+            # find SW clusters and assign new random cluster
+            subgraphs = list(nx.connected_component_subgraphs(G))
             print("\t {} subgraphs".format(len(subgraphs)))
             for graph in subgraphs:
                 new_q = np.random.randint(1, q+1)
                 for node in graph.nodes():
                     S[node] = new_q
 
-            N_max = 0  # compute N_max, page 5 of the paper
-            for q_val in range(q):
-                new_N_max = sum(S == q_val)
-                if new_N_max > N_max:
-                    N_max = new_N_max
+            # only compute magnetization when # of iterations >= # of burn-in samples
+            if mc_index >= mc_burn_in:
+                N_max = np.max(np.array([sum(S == q_val+1) for q_val in range(q)]))  # compute size of largest cluster
+                new_mag = (q * N_max - N_points) / ((q - 1) * N_points)  # compute magnetization, (4) in paper
 
-            new_mag = (q * N_max - N_points) / ((q - 1) * N_points)  # (4) in paper
-            if t_index >= t_burn_in:
-                mag += new_mag
-                magSq += pow(new_mag, 2)
+                mag += new_mag  # sum magnetization for estimate
+                mag_sq += pow(new_mag, 2)  # sum squared magnetization for estimate
 
-            t_index += 1
+        # return mean of magnetization and squared magnetization
+        return mag / (mc_iterations - mc_burn_in), mag_sq / (mc_iterations - mc_burn_in)
 
-        return mag / (t_iter_per_temp - t_burn_in), magSq / (t_iter_per_temp - t_burn_in)
-
+    # compute magnetization in parallel
     mag_new_arr = Parallel(n_jobs=num_cores)(delayed(temp_step)(t_i, t) for t_i, t in enumerate(t_arr))
+
+    # extract magnetization and squared magnetization from parallel array
     mag_arr = np.array([i[0] for i in mag_new_arr])
     mag_sq_arr = np.array([i[1] for i in mag_new_arr])
 
-    # create susceptibility array
+    # compute susceptibility
     suscept_arr = (N_points / t_arr) * (mag_sq_arr - pow(mag_arr, 2))
 
     # write results to file
@@ -202,8 +212,8 @@ if type == 'swmc':
         'y_dim': y_dim,
         'z_dim': z_dim,
         'q': q,
-        't_iter_per_temp': t_iter_per_temp,
-        't_burn_in': t_burn_in,
+        't_iter_per_temp': mc_iterations,
+        't_burn_in': mc_burn_in,
         't_per_min': t_ini,
         't_per_max': t_end,
         't_num_it': t_num_it,
@@ -211,6 +221,8 @@ if type == 'swmc':
         'wm_threshold': wm_threshold,
         'N_points': N_points,
         't_arr': t_arr,
+        'mag_arr': mag_arr,
+        'mag_sq_arr': mag_sq_arr,
         'suscept_arr': suscept_arr
     }
 
@@ -223,66 +235,69 @@ if type == 'swmc':
 
     print("Finished in {} seconds!".format(end - start))
     print("Exported with id {}".format(id))
+
 elif type == 'clustering':
     # initiate Cij and S
     print("Initiating Cij and S...")
     Cij = np.array([0 for i in nn])  # probability of finding sites i and j in the same cluster
-    S = np.ones(N_points) # Initialize S to ones
+    S = np.ones(N_points)  # initialize S to 1's (cluster assignment variable)
 
     print("Starting Monte Carlo for t_superp = {}...".format(t_superp))
-    t_index = 0  # keep track of the burned-in samples
-    for t_i in range(t_iter_per_temp):  # given iterations per temperature
-        print("It. {}/{} \t Started Iteration...".format(t_i+1, t_iter_per_temp))
+    for mc_index in range(mc_iterations):  # given iterations per temperature
+        print("It. {}/{} \t Started Iteration...".format(mc_index + 1, mc_iterations))
         SS = [[] for i in range(q)]  # initialize SS
 
-        G = nx.Graph()  # Initialize graph where we will store "frozen" bonds
+        # initialize graph where we will store "frozen" bonds
+        G = nx.Graph()
         for i in range(N_points):
             G.add_node(i)
 
-        for nn_index, (i, j) in enumerate(nn):  # nearest_neighbors has te be calculated in advance
+        # loop over all neighbors and "freeze" edge with certain prob.
+        for nn_index, (i, j) in enumerate(nn):
             pfij = (1 - np.exp(-nn_jij[nn_index] / t_superp)) if S[i] == S[j] else 0  # page 9 of the paper
             if np.random.uniform(0, 1) < pfij:
                 G.add_edge(i, j)
 
-        subgraphs = list(nx.connected_component_subgraphs(G))  # find SW-clusters
-        print("It. {}/{} \t {} subgraphs".format(t_i + 1, t_iter_per_temp, len(subgraphs)))
+        # find SW clusters and assign new random cluster
+        subgraphs = list(nx.connected_component_subgraphs(G))
+        print("It. {}/{} \t {} subgraphs".format(mc_index + 1, mc_iterations, len(subgraphs)))
         for graph in subgraphs:
             new_q = np.random.randint(1, q+1)
             for node in graph.nodes():
-                SS[new_q-1].append(node)
+                SS[new_q - 1].append(node)
                 S[node] = new_q
 
-        if t_index >= t_burn_in:
+        # only compute correlation when enough burn-in samples
+        if mc_index >= mc_burn_in:
             for i in range(q):
-                print("It. {}/{} \t Cij {}/{} \t Size: {}".format(t_i + 1, t_iter_per_temp, i+1, q, len(SS[i])))
-                for vi in SS[i]:
-                    for vj in SS[i]:
-                        if vj > vi:
-                            index = nn_to_index.get((vi,vj))
-                            if index is not None:
-                                Cij[index] += 1
+                print("It. {}/{} \t Cij {}/{} \t Size: {}".format(mc_index + 1, mc_iterations, i + 1, q, len(SS[i])))
+                combinations = list(set(itertools.combinations(SS[i], 2)).intersection(set(nn)))
+                combinations_keys = [nn_to_index[(i, j)] for (i, j) in combinations]
+                for nn_index in combinations_keys:
+                    Cij[nn_index] += 1
 
-        t_index += 1
-
-    print("Computing estimated probabilities...")
     # average and obtain estimated probabilities
-    Cij = [i / (t_iter_per_temp - t_burn_in) for i in Cij]
+    print("Computing estimated probabilities...")
+    Cij = [i / (mc_iterations - mc_burn_in) for i in Cij]
 
     # initialize graph where we are going to construct our final clustering
     print("Construct final graph and calculate clustering...")
     G = nx.Graph()
 
+    # add nodes for every spin
     for i in range(N_points):
         G.add_node(i)
 
+    # add edges for neighboring spins
     for nn_index, g in enumerate(Cij):
         (i, j) = nn[nn_index]
         if g > Cij_threshold:
             G.add_edge(i, j)
 
+    # compute best neighbors
     Cij_current = [0 for i in range(N_points)]
     best_neighbour = [0 for i in range(N_points)]
-    for nn_index, (vi, vj) in enumerate(nn): # capture points lying in the periphery
+    for nn_index, (vi, vj) in enumerate(nn):
         if Cij[nn_index] > Cij_current[vi]:
             Cij_current[vi] = Cij[nn_index]
             best_neighbour[vi] = vj
@@ -290,6 +305,7 @@ elif type == 'clustering':
             Cij_current[vj] = Cij[nn_index]
             best_neighbour[vj] = vi
 
+    # add edge for every best neighbor
     for vi, vj in enumerate(best_neighbour):
         G.add_edge(vi, vj)
 
@@ -309,8 +325,8 @@ elif type == 'clustering':
         'z_dim': z_dim,
         'q': q,
         't_superp': t_superp,
-        't_iter_per_temp': t_iter_per_temp,
-        't_burn_in': t_burn_in,
+        't_iter_per_temp': mc_iterations,
+        't_burn_in': mc_burn_in,
         'k_neighbors': k_neighbors,
         'wm_threshold': wm_threshold,
         'Cij_threshold': Cij_threshold,
