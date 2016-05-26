@@ -1,3 +1,9 @@
+"""
+Super-paramagnetic clustering
+"""
+
+from joblib import Parallel, delayed
+import multiprocessing
 import numpy as np
 import networkx as nx
 from scipy import spatial as sc
@@ -16,8 +22,8 @@ t_iter = 200  # num. of iterations MC algorithm
 t_burn_in = 50  # number of burn-in samples
 
 q = 20  # num. of pot spin variables
-k_neighbors = 25  # number of nearest neighbors
-wm_threshold = 0  # threshold for white mass (FA > wm_threshold is considered white mass)
+k_neighbors = 10  # number of nearest neighbors
+wm_threshold = 0.3  # threshold for white mass (FA > wm_threshold is considered white mass)
 Gij_threshold = 0.5  # threshold for "core" clusters, section 4.3.2 of the paper
 
 ########################################################################################################################
@@ -29,10 +35,13 @@ max_diff = np.load("data/max_diff_sub.npy")
 FA = np.load("data/FA_sub.npy")
 size = np.load("data/dim_sub.npy")
 
+# set size to dimensions of subset
 (x_dim, y_dim, z_dim) = size
 
-# save some values for recovering xyz values by index of reduced dataset
+# create array of all possible (x,y,z) within subset
 xyz = list(itertools.product(*[list(range(0, x_dim)), list(range(0, y_dim)), list(range(0, z_dim))]))
+
+# remember indices of white matter in original dataset
 wm_range = [i for i in range(x_dim * y_dim * z_dim) if FA[i] > wm_threshold]
 
 # remove all non-white mass from dataset
@@ -61,29 +70,33 @@ def wm_neighbors(i, k):
     return heapq.nsmallest(k, range(len(dist)), dist.take)
 
 
-# # computing nearest neighbors
-print("Computing nearest neighbors...")
-nn = set()
-for i in range(N_points):
+# computing nearest neighbors
+def compute_nearest_neighbors(i):
+    nn = []
     print("Computing nearest neighbors for {} of {}".format(i,N_points))
     for j in wm_neighbors(i, k_neighbors):
         if i < j:
-            nn.add((i, j))
+            nn.append((i, j))
         else:
-            nn.add((j, i))
-            
+            nn.append((j, i))
+    return nn
+
+# computing nearest neighbors with parallel computation
+print("Computing nearest neighbors...")
+n = Parallel(n_jobs=num_cores)(delayed(compute_nearest_neighbors)(i) for i in range(N_points))
+
+nn = set()
+print("Merging the sets..")
+for i in range(N_points):
+    for j in n[i]:
+        nn.add(j)
+
 nn = list(nn)
 N_neighbors = len(nn)
 
 nn_to_index = {}
 for i,v in enumerate(nn):
     nn_to_index[v] = i
-
-# compute average distance
-print("Computing (average) distances between neighbors...")
-nn_dist = np.array([dist_lat(i, j) for (i, j) in nn])
-d_avg = np.mean(nn_dist)
-dSq_avg = np.mean(pow(nn_dist, 2))
 
 # Jij is the cost of considering coupled object i and object j. Here we use the
 # maximum diffusion directions and the fractional anisotropy of each 3d pixel
@@ -107,7 +120,7 @@ S = np.ones(N_points) # Initialize S to ones
 
 print("Starting Monte Carlo for t_superp = {}...".format(t_superp))
 t_index = 0  # keep track of the burned-in samples
-for t_i in range(t_iter):  # given iterations per temperature
+for t_i in range(t_iter):  # given iterations
     print("It. {}/{} \t Started Iteration...".format(t_i+1, t_iter))
     SS = [[] for i in range(q)]  # initialize SS
 
