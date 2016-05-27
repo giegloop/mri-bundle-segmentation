@@ -12,7 +12,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 ########################################################################################################################
 
-id = str(2705161706)
+id = str()
 
 N_clusters_red = 6 # number of clusters to validate on
 

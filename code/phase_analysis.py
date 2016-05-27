@@ -8,24 +8,7 @@ import pickle
 
 ########################################################################################################################
 
-# x_sub = [45, 70] # between 0 and 209
-# y_sub = [45, 70] # between 0 and 209
-# z_sub = [45, 70] # between 0 and 129
-id = str(2305162131)  # white mass > 0.5, 0 to 5
-id = str(2505161633)  # white mass > 0, 2 to 5
-id = str(2605161358)  # white mass > 0, 2.5 to 3.5
-id = str(2605161436)  # normal cost function (1 - np.abs...
-id = str(2605161646)  # normal cost function (1 - np.abs... zoomed
-id = str(2605162042)  # reversed cost function (np.abs...
-id = str(2605162145)  # reversed cost function (np.abs... zoomed
-id = str(2705161259)  # new cost function (np.exp(-6 * pow(j_shape, 2))
-id = str(2705161428)  # new cost function (np.exp(-6 * pow(j_shape, 2)) zoomed
-
-# x_sub = [50, 75]  # between 0 and 209
-# y_sub = [80, 105] # between 0 and 209
-# z_sub = [55, 80]  # between 0 and 129
-id = str(2705161640)  # new cost function (np.exp(-6 * pow(j_shape, 2)) zoomed
-
+id = str()  # white mass > 0.5, 0 to 5
 
 ########################################################################################################################
 

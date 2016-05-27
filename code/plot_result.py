@@ -12,16 +12,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 ########################################################################################################################
 
-# x_sub = [45, 70] # between 0 and 209
-# y_sub = [45, 70] # between 0 and 209
-# z_sub = [45, 70] # between 0 and 129
-id = str(2705161454)  # id of the results to use for analysis
-id = str(2705161856) # new
-
-# x_sub = [50, 75]  # between 0 and 209
-# y_sub = [80, 105] # between 0 and 209
-# z_sub = [55, 80]  # between 0 and 129
-id = str(2705161706)
+id = str()
 
 N_clusters_red = 6   # number of clusters to show
 
