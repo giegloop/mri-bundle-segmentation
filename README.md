@@ -64,10 +64,10 @@ First, we create a subset of the data to run the algorithm on. Do this by openin
    * t\_superp = temperature in superparamagnetic phase
    * Cij\_threshold = threshold for "core" clusters, section 4.3.2 of the Blatt paper
 3. Now, you can run the file. This will create a file in the folder "code/results/" in the format "clustering\_{id}.pkl". When the running is done, the {id} will be outputted.
-4. To get a view of what the clustering created looks like, one can use the file "code/plot_result.py". In this file two global variables can be set, namely id, in which you can use the {id} outputted by the clustering in step 3, and the number of clusters that you want to see in the plot. Running will give you a plot as in the report.
+4. To get a view of what the clustering created looks like, one can use the file "code/plot\_result.py". In this file two global variables can be set, namely id, in which you can use the {id} outputted by the clustering in step 3, and the number of clusters that you want to see in the plot. Running will give you a plot as in the report.
 
 ### Executing in Euler
 As mentioned in the report, the most computationally intensive steps of the code have been parallelized (package "joblib") in order to take advantage of additional processing cores. In our case, we have made use of the Euler cluster and have written a couple of scripts to make it even easier to use. Once you have connected to Euler:  
 1. Set up the environment as menitioned above, but now only everything that is in "code/".
-2. Execute "source init_euler.sh" in order to load the necessary modules and install the required python packages.  
-3. Execute "source run_swmc.sh" to submit the code inside "swmc.py" to the cluster.
+2. Execute "source init\_euler.sh" in order to load the necessary modules and install the required python packages.  
+3. Execute "source run\_swmc.sh" to submit the code inside "swmc.py" to the cluster.
