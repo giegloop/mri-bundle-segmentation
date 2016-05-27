@@ -17,31 +17,31 @@ import pickle
 # TYPE #
 ########################################################################################################################
 
-type = 'swmc' # either 'swmc' or 'clustering'
+type = 'clustering' # either 'swmc' or 'clustering'
 
 ########################################################################################################################
 # GENERAL #
 ########################################################################################################################
 
 q = 20  # num. of pot spin variables
-mc_iterations = 500   # num. of iterations per MC
+mc_iterations = 400   # num. of iterations per MC
 mc_burn_in = 50  # number of burn-in samples for MC (must be < mc_iterations!)
 k_neighbors = 10  # number of nearest neighbors
-wm_threshold = 0.7  # threshold for white mass (FA > wm_threshold is considered white mass)
+wm_threshold = 0.3  # threshold for white mass (FA > wm_threshold is considered white mass)
 
 ########################################################################################################################
 # SWMC #
 ########################################################################################################################
 
-t_ini = 0.5  # initial temperature
-t_end = 2.5  # final temperature (must be > t_ini!)
+t_ini = 0.001  # initial temperature (cannot be 0!)
+t_end = 5  # final temperature (must be > t_ini!)
 t_num_it = 200  # number of iterations between initial and final temperature
 
 ########################################################################################################################
 # CLUSTERING #
 ########################################################################################################################
 
-t_superp = 2  # temperature in superparamagnetic phase
+t_superp = 3.25035  # temperature in superparamagnetic phase
 Cij_threshold = 0.5  # threshold for "core" clusters, section 4.3.2 of the paper
 
 ########################################################################################################################
@@ -55,7 +55,7 @@ start = time.time()
 
 # load number of cores for parallel processing
 num_cores = multiprocessing.cpu_count()
-print("Number of cores: {}", num_cores)
+print("Number of cores: {}".format(num_cores))
 
 # load data with maximum diffusion and fractional anisotropy
 max_diff = np.load("data/max_diff_sub.npy")
@@ -142,7 +142,8 @@ def j_cost(nn_index):
     vi = max_diff[i]
     vj = max_diff[j]
     j_shape = np.abs(np.dot(vi, vj) / (sc.distance.norm(vi) * sc.distance.norm(vj)))
-    return j_shape
+
+    return np.exp(pow(j_shape, 2))-1
 
 print("Computing Jij for all neighbors...")
 nn_jij = np.array([j_cost(nn_index) for nn_index in range(N_neighbors)])
@@ -158,7 +159,7 @@ if type == 'swmc':
     def temp_step(t_i, t):
         print("Time: {}".format(t))
 
-        S = np.ones(N_points)  # initialize S to 1's (cluster assignment variable)
+        S = np.zeros(N_points)  # initialize S to 1's (cluster assignment variable)
         mag = 0  # initialize magnetization
         mag_sq = 0  # initialize squared magnetization
 
@@ -181,13 +182,13 @@ if type == 'swmc':
             subgraphs = list(nx.connected_component_subgraphs(G))
             print("\t {} subgraphs".format(len(subgraphs)))
             for graph in subgraphs:
-                new_q = np.random.randint(1, q+1)
+                new_q = np.random.randint(0, q)
                 for node in graph.nodes():
                     S[node] = new_q
 
             # only compute magnetization when # of iterations >= # of burn-in samples
             if mc_index >= mc_burn_in:
-                N_max = np.max(np.array([sum(S == q_val+1) for q_val in range(q)]))  # compute size of largest cluster
+                N_max = np.max(np.array([sum(S == q_val) for q_val in range(q)]))  # compute size of largest cluster
                 new_mag = (q * N_max - N_points) / ((q - 1) * N_points)  # compute magnetization, (4) in paper
 
                 mag += new_mag  # sum magnetization for estimate
@@ -240,12 +241,12 @@ elif type == 'clustering':
     # initiate Cij and S
     print("Initiating Cij and S...")
     Cij = np.array([0 for i in nn])  # probability of finding sites i and j in the same cluster
-    S = np.ones(N_points)  # initialize S to 1's (cluster assignment variable)
+    S = np.zeros(N_points)  # initialize S to 0's (cluster assignment variable)
 
     print("Starting Monte Carlo for t_superp = {}...".format(t_superp))
     for mc_index in range(mc_iterations):  # given iterations per temperature
         print("It. {}/{} \t Started Iteration...".format(mc_index + 1, mc_iterations))
-        SS = [[] for i in range(q)]  # initialize SS
+        SS = [[] for i in range(q)]  # initialize SS (list for each cluster containing spins that belong to it)
 
         # initialize graph where we will store "frozen" bonds
         G = nx.Graph()
@@ -262,9 +263,9 @@ elif type == 'clustering':
         subgraphs = list(nx.connected_component_subgraphs(G))
         print("It. {}/{} \t {} subgraphs".format(mc_index + 1, mc_iterations, len(subgraphs)))
         for graph in subgraphs:
-            new_q = np.random.randint(1, q+1)
+            new_q = np.random.randint(0, q)
             for node in graph.nodes():
-                SS[new_q - 1].append(node)
+                SS[new_q].append(node)
                 S[node] = new_q
 
         # only compute correlation when enough burn-in samples
@@ -312,7 +313,7 @@ elif type == 'clustering':
     # return final clustering
     print("Formatting output...")
     clusters = np.empty(N_points)
-    cluster_id = 1
+    cluster_id = 0
     for graph in list(nx.connected_component_subgraphs(G)):
         for node in graph.nodes():
             clusters[node] = cluster_id
