@@ -29,7 +29,36 @@ Make sure that in the folder "code/data/" the following files are present (see s
   * embeddings
   * FA
 
-1. First, we create a subset of the data to run the algorithm on. Do this by opening "code/subset.py" and change the global variables x\_sub, y\_sub and z\_sub to the subset you want. Then, run the file. This will create three files in the folder "code/data/": "dim\_sub.npy" , "embedding\_sub.npy" and "FA\_sub.npy".
-2. We are ready for the Svendsen-Wang Monte Carlo algorithm, located in "code/swmc.py". At the top of the file there are a couple of variables which you can change, such as the number of runs per temperature, the number of Pot spin variables etc. If you have configured the way you want, you can run the file. This will create a file in the folder "code/results/" in the format "results_{ddmmyyhhss}.pkl".
-3. For the actual clustering we want to analyze the susceptibility of the different temperatures in the MC algorithm. To do so, open the file "code/phase_analysis.py" and change the global variable id to the {ddmmyyhhss} beloning to your results and run the file to see the susceptibility plot.
-4. ...
+### Create a subset
+First, we create a subset of the data to run the algorithm on. Do this by opening "code/subset.py" and change the global variables x\_sub, y\_sub and z\_sub to the subset you want. Then, run the file. This will create three files in the folder "code/data/": "dim\_sub.npy" , "embedding\_sub.npy" and "FA\_sub.npy", which will be used by the other scripts.
+
+### Spotting the superparamagnetic phase
+1. We are ready to use the Svendsen-Wang Monte Carlo (SWMC) algorithm, located in "code/swmc.py". At the top of the file there are a couple of variables which you can change. The most important one is the "type" variable, which should now be set to "swmc". 
+2. After that, set the following variables:
+   * q = num. of pot spin variables
+   * mc\_iterations = num. of iterations per MC
+   * mc\_burn\_in = number of burn-in samples for MC (must be < mc\_iterations!)
+   * k\_neighbors = number of nearest neighbors
+   * wm\_threshold = threshold for white mass (FA > wm\_threshold is considered white mass)
+2. Also, specify the variables especially for running the SWMC algorithm:
+   * t\_ini =  initial temperature (cannot be 0!)
+   * t\_end = final temperature (must be > t\_ini!)
+   * t\_num_it = number of iterations between initial and final temperature
+3. Now, you can run the file. This will create a file in the folder "code/results/" in the format "results\_{id}.pkl". When the running is done, the {id} will be outputted.
+4. To make the actual clustering we want to analyze the magnetization and susceptibility of the different temperatures in the MC algorithm. To do so, open the file "code/phase_analysis.py" and change the global variable "id" to the {id} belonging to your results and run the file to see the magnetization and susceptibility plot.
+5. As described in the report, one must now search for a steep peak and a sudden decent. In between, one finds the superparamagnetic phase to use for the clustering.
+
+### Clustering
+1. To run the clustering algorithm, located in "code/swmc.py". At the top of the file there are a couple of variables which you can change. The most important one is the "type" variable, which should now be set to "clustering". 
+2. After that, set the following variables:
+   * q = num. of pot spin variables
+   * mc\_iterations = num. of iterations per MC
+   * mc\_burn\_in = number of burn-in samples for MC (must be < mc\_iterations!)
+   * k\_neighbors = number of nearest neighbors
+   * wm\_threshold = threshold for white mass (FA > wm\_threshold is considered white mass)
+2. Also, specify the variables especially for running the SWMC algorithm:
+   * t\_superp = temperature in superparamagnetic phase
+   * Cij\_threshold = threshold for "core" clusters, section 4.3.2 of the Blatt paper
+3. Now, you can run the file. This will create a file in the folder "code/results/" in the format "clustering\_{id}.pkl". When the running is done, the {id} will be outputted.
+4. To make the actual clustering we want to analyze the magnetization and susceptibility of the different temperatures in the MC algorithm. To do so, open the file "code/plot\_result.py" and change the global variable "id" to the {id} belonging to your results. Also, set a maximum number of clusters you want to see in the variable "N\_clusters\_red". 
+5. As described in the report, one must now search for a steep peak and a sudden decent. In between, one finds the superparamagnetic phase to use for the clustering.
