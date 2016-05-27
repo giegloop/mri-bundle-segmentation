@@ -68,5 +68,6 @@ First, we create a subset of the data to run the algorithm on. Do this by openin
 
 ### Executing in Euler
 As mentioned in the report, the most computationally intensive steps of the code have been parallelized (package "joblib") in order to take advantage of additional processing cores. In our case, we have made use of the Euler cluster and have written a couple of scripts to make it even easier to use. Once you have connected to Euler:  
-1. Execute "source init_euler.sh" in order to load the necessary modules and install the required python packages.  
-2. Execute  "source run_swmc.sh" to submit the code inside "swmc.py" to the cluster.
+1. Set up the environment as menitioned above, but now only everything that is in "code/".
+2. Execute "source init_euler.sh" in order to load the necessary modules and install the required python packages.  
+3. Execute "source run_swmc.sh" to submit the code inside "swmc.py" to the cluster.
