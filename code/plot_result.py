@@ -1,5 +1,5 @@
 """
-Create a plot of the susceptibility for phase analysis
+Create a plot of the final clustering
 """
 
 import numpy as np

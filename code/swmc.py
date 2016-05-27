@@ -1,5 +1,5 @@
 """
-Svendsen-Wang Algorithm
+Svendsen-Wang Algorithm for both swmc and clustering
 """
 
 from joblib import Parallel, delayed

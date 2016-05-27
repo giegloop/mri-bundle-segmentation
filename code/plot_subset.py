@@ -1,5 +1,5 @@
 """
-Creates a scatterplot for the current subset
+Creates a plot for the current subset
 """
 
 import numpy as np
