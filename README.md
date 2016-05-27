@@ -9,6 +9,7 @@ Project for Statistical Learning Theory Course at ETH Zurich by Antonio Orvieto,
 * literature/
   * papers/
 * report/
+* results/
 
 ## Pre-processing
 You can either do the pre-processing yourself, or download the following two files and place them in "code/data":
@@ -26,13 +27,14 @@ If you want to do the pre-processing yourself, follow these steps:
 
 ## Instructions
 * It is necessary to execute the files with Python 3.
+* Make sure you have created the folder "code/results/" to save the results of the experiments.
 
 * Make sure that in the folder "code/data/" the following files are present (see steps under pre-processing):
   * embeddings
   * FA
 
 ### Create a subset
-First, we create a subset of the data to run the algorithm on. Do this by opening "code/subset.py" and change the global variables x\_sub, y\_sub and z\_sub to the subset you want. Then, run the file. This will create three files in the folder "code/data/": "dim\_sub.npy" , "embedding\_sub.npy" and "FA\_sub.npy", which will be used by the other scripts.
+First, we create a subset of the data to run the algorithm on. Do this by opening "code/subset.py" and change the global variables x\_sub, y\_sub and z\_sub to the subset you want. Then, run the file. This will create three files in the folder "code/data/": "dim\_sub.npy" , "embedding\_sub.npy" and "FA\_sub.npy", which will be used by the other scripts. If you want to see what the subset looks like, run "code/plot_subset.py".
 
 ### Spotting the superparamagnetic phase
 1. We are ready to use the Svendsen-Wang Monte Carlo (SWMC) algorithm, located in "code/swmc.py". At the top of the file there are a couple of variables which you can change. The most important one is the "type" variable, which should now be set to "swmc". 
@@ -62,8 +64,7 @@ First, we create a subset of the data to run the algorithm on. Do this by openin
    * t\_superp = temperature in superparamagnetic phase
    * Cij\_threshold = threshold for "core" clusters, section 4.3.2 of the Blatt paper
 3. Now, you can run the file. This will create a file in the folder "code/results/" in the format "clustering\_{id}.pkl". When the running is done, the {id} will be outputted.
-4. To make the actual clustering we want to analyze the magnetization and susceptibility of the different temperatures in the MC algorithm. To do so, open the file "code/plot\_result.py" and change the global variable "id" to the {id} belonging to your results. Also, set a maximum number of clusters you want to see in the variable "N\_clusters\_red". 
-5. As described in the report, one must now search for a steep peak and a sudden decent. In between, one finds the superparamagnetic phase to use for the clustering.
+4. To get a view of what the clustering created looks like, one can use the file "code/plot_result.py". In this file two global variables can be set, namely id, in which you can use the {id} outputted by the clustering in step 3, and the number of clusters that you want to see in the plot. Running will give you a plot as in the report.
 
 ### Executing in Euler
 As mentioned in the report, the most computationally intensive steps of the code have been parallelized (package "joblib") in order to take advantage of additional processing cores. In our case, we have made use of the Euler cluster and have written a couple of scripts to make it even easier to use. Once you have connected to Euler:  
