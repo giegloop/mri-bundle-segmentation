@@ -27,21 +27,21 @@ q = 20  # num. of pot spin variables
 mc_iterations = 400   # num. of iterations per MC
 mc_burn_in = 50  # number of burn-in samples for MC (must be < mc_iterations!)
 k_neighbors = 10  # number of nearest neighbors
-wm_threshold = 0.3  # threshold for white mass (FA > wm_threshold is considered white mass)
+wm_threshold = 0.25 # threshold for white mass (FA > wm_threshold is considered white mass)
 
 ########################################################################################################################
 # SWMC #
 ########################################################################################################################
 
 t_ini = 0.001  # initial temperature (cannot be 0!)
-t_end = 1  # final temperature (must be > t_ini!)
+t_end = 1.5  # final temperature (must be > t_ini!)
 t_num_it = 200  # number of iterations between initial and final temperature
 
 ########################################################################################################################
 # CLUSTERING #
 ########################################################################################################################
 
-t_superp = 0.42  # temperature in superparamagnetic phase
+t_superp = 0.47  # temperature in superparamagnetic phase
 Cij_threshold = 0.5  # threshold for "core" clusters, section 4.3.2 of the paper
 
 ########################################################################################################################
@@ -59,6 +59,7 @@ print("Number of cores: {}".format(num_cores))
 
 # load data with maximum diffusion and fractional anisotropy
 max_diff = np.load("data/max_diff_sub.npy")
+print(max_diff.shape)
 FA = np.load("data/FA_sub.npy")
 size = np.load("data/dim_sub.npy")
 

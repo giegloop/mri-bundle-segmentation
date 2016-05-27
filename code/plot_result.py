@@ -12,8 +12,18 @@ from mpl_toolkits.mplot3d import Axes3D
 
 ########################################################################################################################
 
-id = str(2605161704)  # id of the results to use for analysis
-N_clusters_red = 10   # number of clusters to show
+# x_sub = [45, 70] # between 0 and 209
+# y_sub = [45, 70] # between 0 and 209
+# z_sub = [45, 70] # between 0 and 129
+id = str(2705161454)  # id of the results to use for analysis
+id = str(2705161856) # new
+
+# x_sub = [50, 75]  # between 0 and 209
+# y_sub = [80, 105] # between 0 and 209
+# z_sub = [55, 80]  # between 0 and 129
+id = str(2705161706)
+
+N_clusters_red = 6   # number of clusters to show
 
 ########################################################################################################################
 
@@ -69,10 +79,18 @@ for i in range(N_points):
 
 fig = plt.figure(1)
 ax = fig.add_subplot(111, projection='3d')
-ax.scatter(x[plot_indexes], y[plot_indexes], z[plot_indexes],depthshade=False, s=70, c=colors[plot_indexes])
+ax.scatter(x[plot_indexes], y[plot_indexes], z[plot_indexes],depthshade=False, s=40, c=colors[plot_indexes])
 ax.set_xlim3d(0,x_dim)
 ax.set_ylim3d(0,y_dim)
 ax.set_zlim3d(0,z_dim)
+
+fig2 = plt.figure(2)
+ax = fig2.add_subplot(111)
+ax.hist(clusters, len(np.unique(clusters)))
+plt.xlabel("cluster id")
+plt.ylabel("cluster size")
+plt.xlim(0,len(np.unique(clusters)))
+
 
 # fig2 = plt.figure(2)
 # ax = fig2.add_subplot(111, projection='3d')
