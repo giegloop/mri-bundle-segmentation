@@ -14,7 +14,7 @@ x_dim = size[0]  # x dimension of original data
 y_dim = size[1]  # y dimension of original data
 z_dim = size[2]  # z dimension of original data
 
-wm_threshold = 0.5  # threshold for white mass (FA > wm_threshold is considered white mass)
+wm_threshold = 0.3  # threshold for white mass (FA > wm_threshold is considered white mass)
 
 ########################################################################################################################
 
@@ -50,6 +50,6 @@ for i in range(N_points):
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-ax.scatter(x, y, z, s=70)
+ax.scatter(x, y, z, s=50,depthshade=False)
 
 # plt.scatter(y, z)

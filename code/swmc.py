@@ -34,14 +34,14 @@ wm_threshold = 0.3  # threshold for white mass (FA > wm_threshold is considered 
 ########################################################################################################################
 
 t_ini = 0.001  # initial temperature (cannot be 0!)
-t_end = 5  # final temperature (must be > t_ini!)
+t_end = 1  # final temperature (must be > t_ini!)
 t_num_it = 200  # number of iterations between initial and final temperature
 
 ########################################################################################################################
 # CLUSTERING #
 ########################################################################################################################
 
-t_superp = 3.25035  # temperature in superparamagnetic phase
+t_superp = 0.42  # temperature in superparamagnetic phase
 Cij_threshold = 0.5  # threshold for "core" clusters, section 4.3.2 of the paper
 
 ########################################################################################################################
@@ -143,7 +143,7 @@ def j_cost(nn_index):
     vj = max_diff[j]
     j_shape = np.abs(np.dot(vi, vj) / (sc.distance.norm(vi) * sc.distance.norm(vj)))
 
-    return np.exp(pow(j_shape, 2))-1
+    return np.exp(-6 * pow(j_shape, 2))
 
 print("Computing Jij for all neighbors...")
 nn_jij = np.array([j_cost(nn_index) for nn_index in range(N_neighbors)])

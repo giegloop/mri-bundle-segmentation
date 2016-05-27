@@ -8,4 +8,4 @@ export PYTHONPATH=$HOME/python/lib64/python3.3/site-packages:$PYTHONPATH
 echo "Installing necessary packages..."
 pip3 install --install-option="--prefix=$HOME/python" networkx joblib
 
-echo "Done!"
+echo "Done"
